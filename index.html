@@ -1,0 +1,602 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Maktub - Lead Extractor</title>
+  <!-- Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link
+    href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;700;800&family=Inter:wght@400;500;600;700&display=swap"
+    rel="stylesheet">
+  <!-- Icons -->
+  <script src="https://unpkg.com/@phosphor-icons/web"></script>
+  <link rel="stylesheet" href="style.css">
+  <link rel="icon" href="assets/logo.png?v=1" type="image/png">
+  <link rel="shortcut icon" href="assets/logo.png?v=1" type="image/png">
+</head>
+
+<body>
+  <div class="app-container">
+    <!-- Sidebar -->
+    <aside class="sidebar" id="sidebar">
+      <div class="sidebar-header">
+        <h2 class="sidebar-logo" id="sidebarLogoText">MAKTUB</h2>
+        <p class="subtitle" id="sidebarSubtitle">Lead Extractor</p>
+        <div class="collapsed-logo" id="collapsedLogo">
+          <img src="assets/logo.png" alt="Maktub" class="logo-icon">
+        </div>
+      </div>
+
+      <nav class="sidebar-nav">
+        <div class="nav-category">Empresas</div>
+        <a href="#" class="nav-item active" id="nav-company-search">
+          <i class="ph-bold ph-magnifying-glass"></i>
+          <span>Buscar empresas</span>
+        </a>
+        <a href="#" class="nav-item" id="nav-company-history">
+          <i class="ph-bold ph-buildings"></i>
+          <span>Histórico de Empresas</span>
+        </a>
+
+        <div class="nav-category">Leads</div>
+        <a href="#" class="nav-item" id="nav-search">
+          <i class="ph-bold ph-magnifying-glass"></i>
+          <span>Buscar leads</span>
+        </a>
+        <a href="#" class="nav-item" id="nav-history">
+          <i class="ph-bold ph-list-bullets"></i>
+          <span>Histórico de leads</span>
+        </a>
+
+        <div class="nav-category">Configurações</div>
+        <a href="#" class="nav-item">
+          <i class="ph-bold ph-user"></i>
+          <span>Conta</span>
+        </a>
+        <a href="#" class="nav-item" id="nav-connection">
+          <i class="ph-bold ph-plugs"></i>
+          <span>Conexão</span>
+        </a>
+      </nav>
+
+      <div class="sidebar-footer">
+        <button class="sidebar-toggle-btn" id="sidebarToggle" title="Recolher barra lateral">
+          <i class="ph-bold ph-caret-left"></i>
+        </button>
+      </div>
+    </aside>
+
+    <!-- Main Content -->
+    <main class="main-content">
+      <!-- Company Search View -->
+      <div id="company-search-view">
+        <header class="top-header">
+          <div class="page-title">
+            <h1>Busca de Empresas</h1>
+            <p>Encontre empresas qualificadas no LinkedIn (ex: casas de apostas, providers, etc).</p>
+          </div>
+        </header>
+
+        <!-- Company Search Panel -->
+        <section class="search-panel panel">
+          <form id="companyExtractForm" class="search-grid">
+            <div class="input-group">
+              <label><i class="las la-globe"></i> País</label>
+              <div class="custom-select" id="countrySelect">
+                <div class="select-trigger" id="countryTrigger">
+                  <span id="countryPlaceholder">Brasil</span>
+                  <i class="ph-bold ph-caret-down"></i>
+                </div>
+                <div class="select-dropdown" id="countryDropdown">
+                  <div class="select-option">
+                    <input type="radio" name="countryOption" value="Worldwide" id="country-worldwide">
+                    <label for="country-worldwide">Mundial (Sem filtro de país)</label>
+                  </div>
+                  <div class="select-option">
+                    <input type="radio" name="countryOption" value="Brazil" id="country-brazil" checked>
+                    <label for="country-brazil">Brasil</label>
+                  </div>
+                  <div class="select-option">
+                    <input type="radio" name="countryOption" value="United States" id="country-us">
+                    <label for="country-us">Estados Unidos</label>
+                  </div>
+                  <div class="select-option">
+                    <input type="radio" name="countryOption" value="United Kingdom" id="country-uk">
+                    <label for="country-uk">Reino Unido</label>
+                  </div>
+                  <div class="select-option">
+                    <input type="radio" name="countryOption" value="Malta" id="country-malta">
+                    <label for="country-malta">Malta</label>
+                  </div>
+                  <div class="select-option">
+                    <input type="radio" name="countryOption" value="Cyprus" id="country-cyprus">
+                    <label for="country-cyprus">Chipre</label>
+                  </div>
+                  <div class="select-option">
+                    <input type="radio" name="countryOption" value="Curacao" id="country-curacao">
+                    <label for="country-curacao">Curaçao</label>
+                  </div>
+                  <div class="select-option">
+                    <input type="radio" name="countryOption" value="Portugal" id="country-portugal">
+                    <label for="country-portugal">Portugal</label>
+                  </div>
+                  <div class="select-option">
+                    <input type="radio" name="countryOption" value="Spain" id="country-spain">
+                    <label for="country-spain">Espanha</label>
+                  </div>
+                  <div class="select-option">
+                    <input type="radio" name="countryOption" value="Canada" id="country-canada">
+                    <label for="country-canada">Canadá</label>
+                  </div>
+                  <div class="select-option">
+                    <input type="radio" name="countryOption" value="Australia" id="country-australia">
+                    <label for="country-australia">Austrália</label>
+                  </div>
+                  <div class="select-option">
+                    <input type="radio" name="countryOption" value="Germany" id="country-germany">
+                    <label for="country-germany">Alemanha</label>
+                  </div>
+                  <div class="select-option">
+                    <input type="radio" name="countryOption" value="France" id="country-france">
+                    <label for="country-france">França</label>
+                  </div>
+                  <div class="select-option">
+                    <input type="radio" name="countryOption" value="Mexico" id="country-mexico">
+                    <label for="country-mexico">México</label>
+                  </div>
+                  <div class="select-option">
+                    <input type="radio" name="countryOption" value="Colombia" id="country-colombia">
+                    <label for="country-colombia">Colômbia</label>
+                  </div>
+                  <div class="select-option">
+                    <input type="radio" name="countryOption" value="Argentina" id="country-argentina">
+                    <label for="country-argentina">Argentina</label>
+                  </div>
+                  <div class="select-option">
+                    <input type="radio" name="countryOption" value="Peru" id="country-peru">
+                    <label for="country-peru">Peru</label>
+                  </div>
+                  <div class="select-option">
+                    <input type="radio" name="countryOption" value="Chile" id="country-chile">
+                    <label for="country-chile">Chile</label>
+                  </div>
+                  <div class="select-option">
+                    <input type="radio" name="countryOption" value="India" id="country-india">
+                    <label for="country-india">Índia</label>
+                  </div>
+                </div>
+              </div>
+              <input type="hidden" id="companyCountryInput" value="Brazil">
+            </div>
+
+            <div class="input-group">
+              <label for="companyTypeSelect"><i class="las la-tags"></i> Tipo de Empresa</label>
+              <div class="custom-select" id="companyTypeSelect">
+                <div class="select-trigger" id="companyTypeTrigger">
+                  <span id="companyTypePlaceholder">Selecionar tipos...</span>
+                  <i class="ph-bold ph-caret-down"></i>
+                </div>
+                <div class="select-dropdown" id="companyTypeDropdown">
+                  <div class="select-option">
+                    <input type="checkbox" value="Operator" id="type-operator">
+                    <label for="type-operator">Operator</label>
+                  </div>
+                  <div class="select-option">
+                    <input type="checkbox" value="Game Provider" id="type-game-provider">
+                    <label for="type-game-provider">Game Provider</label>
+                  </div>
+                  <div class="select-option">
+                    <input type="checkbox" value="Aggregator / Platform" id="type-aggregator">
+                    <label for="type-aggregator">Aggregator / Platform</label>
+                  </div>
+                </div>
+              </div>
+              <input type="hidden" id="companyTypeInput">
+            </div>
+
+            <div class="input-group">
+              <label for="companyKeywordsInput"><i class="las la-key"></i> Palavras-Chave</label>
+              <input type="text" id="companyKeywordsInput" placeholder="Ex: Betting, Casino, Gambling">
+            </div>
+
+
+            <div class="input-group">
+              <label for="companyCountInput"><i class="las la-list-ol"></i> Quantidade</label>
+              <input type="number" id="companyCountInput" min="1" max="100" value="10" placeholder="Ex: 10">
+            </div>
+
+            <div class="input-group" style="grid-column: span 3; display: flex; justify-content: flex-end; margin-top: 1rem;">
+              <div style="display: flex; gap: 1rem;">
+                <button type="submit" class="btn btn-primary" id="companySearchBtn">
+                  <i class="las la-bolt"></i> Buscar Empresas
+                </button>
+                <button type="button" class="btn btn-outline" id="exportCompanyBtn" disabled>
+                  <i class="las la-file-csv"></i> Exportar CSV
+                </button>
+              </div>
+            </div>
+          </form>
+        </section>
+
+        <!-- Company Stats Bar -->
+        <div class="stats-bar">
+          <div class="stat-card panel">
+            <i class="las la-building"></i>
+            <div class="stat-info">
+              <span class="stat-value" id="totalCompanies">0</span>
+              <span class="stat-label">Empresas Encontradas</span>
+            </div>
+          </div>
+          <!-- Status do Motor -->
+          <div class="stat-card panel status-card" id="companyStatusCard" style="display: none;">
+            <i class="las la-server"></i>
+            <div class="stat-info">
+              <span class="stat-value" id="companyMotorStatusText">Aguardando</span>
+              <span class="stat-label" id="companyMotorSubtext">Pronto para iniciar</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Company Results Table -->
+        <section class="results-container panel">
+          <div class="table-header">
+            <h3>Empresas Encontradas</h3>
+          </div>
+          <div class="table-responsive">
+            <table class="leads-table">
+              <thead>
+                <tr>
+                  <th style="width: 80px; text-align: center;">Salvo</th>
+                  <th>Nome da Empresa</th>
+                  <th>Setor / Tipo</th>
+                  <th>Funcionários</th>
+                  <th>LinkedIn</th>
+                  <th>Ações</th>
+                </tr>
+              </thead>
+              <tbody id="companyResultsBody">
+                <tr class="empty-state">
+                  <td colspan="6">
+                    <div class="empty-content">
+                      <i class="las la-robot"></i>
+                      <p>Nenhuma empresa extraída ainda. Preencha os filtros acima e inicie a busca.</p>
+                    </div>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </section>
+      </div>
+
+      <!-- Search View (Leads) -->
+      <div id="search-view" style="display: none;">
+        <header class="top-header">
+          <div class="page-title">
+            <h1>Busca de Leads</h1>
+            <p>Obtenha os leads qualificados do mercado de iGaming instantaneamente.</p>
+          </div>
+          <div class="header-actions">
+            <button type="button" class="btn btn-secondary" id="pullDataBtn" disabled>
+              <i class="las la-database"></i> Puxar Dados
+            </button>
+            <button type="button" class="btn btn-primary" id="searchBtn">
+              <i class="las la-bolt"></i> Extrair Agora
+            </button>
+          </div>
+        </header>
+
+        <!-- Search Panel -->
+        <section class="search-panel panel">
+          <form id="extractForm" class="search-grid">
+            <div class="input-group">
+              <label for="companyInput"><i class="las la-building"></i> Empresa / Cassino</label>
+              <input type="text" id="companyInput" placeholder="Ex: Bet365, Blaze, BrBet">
+            </div>
+
+            <div class="input-group">
+              <label for="linkedinUrlInput"><i class="lab la-linkedin"></i> URL do LinkedIn <span style="color: var(--brand-primary); font-size: 0.75rem;">(obrigatório)</span></label>
+              <input type="text" id="linkedinUrlInput" placeholder="Ex: https://www.linkedin.com/company/brbet/" required>
+            </div>
+
+            <div class="input-group">
+              <label for="roleInput"><i class="las la-user-tie"></i> Cargo Alvo (Opcional)</label>
+              <input type="text" id="roleInput" placeholder="Ex: Founder, Marketing Manager">
+            </div>
+          </form>
+        </section>
+
+        <!-- Stats Bar -->
+        <div class="stats-bar">
+          <div class="stat-card panel">
+            <i class="las la-users"></i>
+            <div class="stat-info">
+              <span class="stat-value" id="totalLeads">0</span>
+              <span class="stat-label">Leads Encontrados</span>
+            </div>
+          </div>
+          <!-- Status do Motor -->
+          <div class="stat-card panel status-card" id="leadStatusCard" style="display: none;">
+            <i class="las la-server"></i>
+            <div class="stat-info">
+              <span class="stat-value" id="motorStatusText">Aguardando</span>
+              <span class="stat-label" id="motorSubtext">Pronto para iniciar</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Results Table -->
+        <section class="results-container panel">
+          <div class="table-header">
+            <h3>Resultados da Extração</h3>
+          </div>
+          <div class="table-responsive">
+            <table class="leads-table">
+              <thead>
+                <tr>
+                  <th style="width: 60px; text-align: center;">País</th>
+                  <th>Nome & Perfil</th>
+                  <th>Cargo Título</th>
+                  <th>Empresa</th>
+                  <th>E-mail</th>
+                  <th style="text-align: center;">Ações</th>
+                </tr>
+              </thead>
+              <tbody id="resultsBody">
+                <tr class="empty-state">
+                  <td colspan="6">
+                    <div class="empty-content">
+                      <i class="las la-robot"></i>
+                      <p>Nenhum lead extraído ainda. Preencha os filtros acima e inicie a busca.</p>
+                    </div>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </section>
+      </div>
+
+      <!-- Connection View -->
+      <div id="connection-view" style="display: none;">
+        <header class="top-header">
+          <div class="page-title">
+            <h1>Conexão Apify</h1>
+            <p>Gerencie sua chave de API para habilitar a extração de leads.</p>
+          </div>
+        </header>
+
+        <section class="panel" style="margin-top: 1rem;">
+          <div class="stat-card status-card" id="connectionStatusCard"
+            style="margin-bottom: 2rem; max-width: 450px; padding: 1.5rem; display: flex; align-items: center; gap: 1.5rem; border: 1px solid var(--border-color); border-radius: 4px;">
+            <div class="status-dot-container">
+              <div class="status-dot" id="connectionStatusDot"></div>
+            </div>
+            <div class="stat-info">
+              <span class="stat-value" id="connectionStatusTitle" style="font-size: 1.25rem;">Verificando...</span>
+              <span class="stat-label" id="connectionStatusText">Checando status da API Apify</span>
+            </div>
+          </div>
+
+          <form id="connectionForm">
+            <div class="input-group" style="margin-bottom: 1.5rem;">
+              <label for="apiKeyInput"><i class="las la-key"></i> Chave da API Apify</label>
+              <div class="input-with-icon">
+                <input type="password" id="apiKeyInput" placeholder="Sua Apify API Token" required
+                  style="width: 100%; max-width: 500px; padding-right: 3rem;">
+                <button type="button" class="input-toggle-btn" id="toggleApiKey">
+                  <i class="ph-bold ph-eye"></i>
+                </button>
+              </div>
+            </div>
+            
+            <div style="display: flex; gap: 1rem;">
+              <button type="submit" class="btn btn-primary">
+                <i class="las la-save"></i> Salvar Alterações
+              </button>
+              <button type="button" class="btn btn-outline" id="refreshConnectionBtn">
+                <i class="las la-sync"></i> Atualizar Status
+              </button>
+            </div>
+          </form>
+        </section>
+      </div>
+
+      <!-- History View -->
+      <div id="history-view" style="display: none;">
+        <header class="top-header">
+          <div class="page-title">
+            <h1>Histórico de Leads</h1>
+            <p>Veja e filtre todos os leads já extraídos e salvos no banco de dados.</p>
+          </div>
+          <div class="header-actions">
+            <button class="btn btn-primary" id="historySearchBtn">
+              <i class="las la-search"></i> Buscar Leads
+            </button>
+          </div>
+        </header>
+
+        <!-- Filters -->
+        <section class="search-panel panel" style="margin-top: 1rem;">
+          <div class="search-grid" style="grid-template-columns: repeat(2, 1fr); gap: 2rem;">
+            <div class="input-group">
+              <label for="historyNameFilter"><i class="las la-user"></i> Nome ou Cargo</label>
+              <input type="text" id="historyNameFilter" placeholder="Filtrar por nome ou cargo...">
+            </div>
+            <div class="input-group">
+              <label for="historyCompanyFilter"><i class="las la-building"></i> Empresa</label>
+              <input type="text" id="historyCompanyFilter" placeholder="Filtrar por empresa...">
+            </div>
+          </div>
+        </section>
+
+        <!-- Stats Bar -->
+        <div class="stats-bar" style="margin-top: 1rem;">
+          <div class="stat-card panel">
+            <i class="las la-database"></i>
+            <div class="stat-info">
+              <span class="stat-value" id="historyTotalLeads">0</span>
+              <span class="stat-label">Leads Salvos</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Results Table -->
+        <section class="results-container panel" style="margin-top: 1rem;">
+          <div class="table-header">
+            <h3>Leads no Banco de Dados</h3>
+          </div>
+          <div class="table-responsive">
+            <table class="leads-table">
+              <thead>
+                <tr>
+                  <th style="width: 60px; text-align: center;">País</th>
+                  <th>Nome & Perfil</th>
+                  <th>Cargo Título</th>
+                  <th>Empresa</th>
+                  <th>E-mail</th>
+                  <th>Data Extração</th>
+                  <th style="text-align: center;">Ações</th>
+                </tr>
+              </thead>
+              <tbody id="historyResultsBody">
+                <tr class="empty-state">
+                  <td colspan="7">
+                    <div class="empty-content">
+                      <div class="spinner" id="historySpinner"
+                        style="width: 30px; height: 30px; border-width: 3px; border-top-color: var(--brand-primary); display: none;">
+                      </div>
+                      <p id="historyEmptyText">Carregando histórico...</p>
+                    </div>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </section>
+      </div>
+
+      <!-- Company History View -->
+      <div id="company-history-view" style="display: none;">
+        <header class="top-header">
+          <div class="page-title">
+            <h1>Histórico de Empresas</h1>
+            <p>Veja e filtre todas as empresas conectadas e salvas no banco de dados.</p>
+          </div>
+          <div class="header-actions">
+            <button class="btn btn-outline" id="refreshCompanyHistoryBtn" title="Atualizar lista do banco">
+              <i class="las la-sync"></i> Atualizar
+            </button>
+            <button class="btn btn-primary" id="companyHistorySearchBtn">
+              <i class="las la-search"></i> Buscar Empresas
+            </button>
+          </div>
+        </header>
+
+        <!-- Filters -->
+        <section class="search-panel panel" style="margin-top: 1rem;">
+          <div class="search-grid" style="grid-template-columns: repeat(2, 1fr); gap: 2rem;">
+            <div class="input-group">
+              <label for="companyHistoryNameFilter"><i class="las la-building"></i> Nome da Empresa</label>
+              <input type="text" id="companyHistoryNameFilter" placeholder="Filtrar por nome...">
+            </div>
+            <div class="input-group">
+              <label for="companyHistoryTypeSelect"><i class="las la-tags"></i> Setor / Tipo</label>
+              <div class="custom-select" id="companyHistoryTypeSelect">
+                <div class="select-trigger" id="companyHistoryTypeTrigger">
+                  <span id="companyHistoryTypePlaceholder">Selecionar tipos...</span>
+                  <i class="ph-bold ph-caret-down"></i>
+                </div>
+                <div class="select-dropdown" id="companyHistoryTypeDropdown">
+                  <div class="select-option">
+                    <input type="checkbox" value="Operator" id="history-type-operator">
+                    <label for="history-type-operator">Operator</label>
+                  </div>
+                  <div class="select-option">
+                    <input type="checkbox" value="Game Provider" id="history-type-game-provider">
+                    <label for="history-type-game-provider">Game Provider</label>
+                  </div>
+                  <div class="select-option">
+                    <input type="checkbox" value="Aggregator / Platform" id="history-type-aggregator">
+                    <label for="history-type-aggregator">Aggregator / Platform</label>
+                  </div>
+                </div>
+              </div>
+              <input type="hidden" id="companyHistoryIndustryFilter">
+            </div>
+          </div>
+        </section>
+
+        <!-- Stats Bar -->
+        <div class="stats-bar" style="margin-top: 1rem;">
+          <div class="stat-card panel">
+            <i class="las la-database"></i>
+            <div class="stat-info">
+              <span class="stat-value" id="companyHistoryTotalCompanies">0</span>
+              <span class="stat-label">Empresas Salvas</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Results Table -->
+        <section class="results-container panel" style="margin-top: 1rem;">
+          <div class="table-header">
+            <h3>Empresas no Banco de Dados</h3>
+          </div>
+          <div class="table-responsive">
+            <table class="leads-table">
+              <thead>
+                <tr>
+                  <th>Nome da Empresa</th>
+                  <th>Setor / Tipo</th>
+                  <th>Funcionários</th>
+                  <th>LinkedIn</th>
+                  <th style="text-align: center;">Ações</th>
+                </tr>
+              </thead>
+              <tbody id="companyHistoryResultsBody">
+                <tr class="empty-state">
+                  <td colspan="5">
+                    <div class="empty-content">
+                      <div class="spinner" id="companyHistorySpinner"
+                        style="width: 30px; height: 30px; border-width: 3px; border-top-color: var(--brand-primary); display: none;">
+                      </div>
+                      <p id="companyHistoryEmptyText">Carregando histórico...</p>
+                    </div>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </section>
+      </div>
+    </main>
+  </div>
+
+  <!-- Confirmation Modal -->
+  <div id="extractConfirmModal" class="modal-overlay" style="display: none;">
+    <div class="modal-card">
+      <div class="modal-icon">
+        <i class="las la-bolt"></i>
+      </div>
+      <h3 class="modal-title">Extrair Leads</h3>
+      <p class="modal-body">Deseja iniciar a extração de contatos da empresa</p>
+      <p class="modal-company-name" id="modalCompanyName">—</p>
+      <p class="modal-hint">Isso buscará funcionários no LinkedIn e enriquecerá os dados com e-mail e telefone. Pode levar alguns minutos.</p>
+      <div class="modal-actions">
+        <button class="btn btn-outline" id="modalCancelBtn">Cancelar</button>
+        <button class="btn btn-primary" id="modalConfirmBtn">Confirmar</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Feedback Toast -->
+  <div id="toast" class="toast">Notificação</div>
+
+  <script src="app.js"></script>
+</body>
+
+</html>
