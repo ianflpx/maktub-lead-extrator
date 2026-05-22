@@ -1296,34 +1296,28 @@ function getCountryISO(countryName) {
     return null;
 }
 
-function getWebsiteLogoFallback(company) {
-    const website = company.website || company.websiteUrl || '';
-    if (!website) return '';
-
-    try {
-        const parsedUrl = new URL(website.startsWith('http') ? website : `https://${website}`);
-        if (parsedUrl.hostname.includes('linkedin.com')) return '';
-        return `https://www.google.com/s2/favicons?domain=${encodeURIComponent(parsedUrl.hostname)}&sz=128`;
-    } catch (_) {
-        return '';
-    }
-}
-
-function isExpiredLinkedInLogo(url) {
-    if (!url || !url.includes('media.licdn.com')) return false;
-
-    try {
-        const expiresAt = Number(new URL(url).searchParams.get('e'));
-        return Number.isFinite(expiresAt) && expiresAt * 1000 <= Date.now();
-    } catch (_) {
-        return false;
-    }
+function isLocalPreview() {
+    return window.location.hostname === 'localhost'
+        || window.location.hostname === '127.0.0.1'
+        || window.location.protocol === 'file:';
 }
 
 function getCompanyLogoUrl(company) {
     const linkedinLogo = company.logoUrl || company.logo || '';
-    if (linkedinLogo && !isExpiredLinkedInLogo(linkedinLogo)) return linkedinLogo;
-    return getWebsiteLogoFallback(company);
+    if (!linkedinLogo) return '';
+
+    // In production, keep LinkedIn media same-origin so browser privacy
+    // protections do not hide company logos that still exist in Mongo.
+    if (!isLocalPreview()) {
+        const params = new URLSearchParams({
+            logo: linkedinLogo,
+            linkedin: company.linkedinUrl || '',
+            id: company._id || ''
+        });
+        return `/api/company-logo?${params.toString()}`;
+    }
+
+    return linkedinLogo;
 }
 
 function escapeHtmlAttribute(value) {
@@ -1334,20 +1328,7 @@ function escapeHtmlAttribute(value) {
         .replace(/>/g, '&gt;');
 }
 
-function getCompanyLogoFallbackUrl(company, logoUrl) {
-    const websiteLogo = getWebsiteLogoFallback(company);
-    return websiteLogo && websiteLogo !== logoUrl ? websiteLogo : '';
-}
-
 function handleCompanyLogoError(image) {
-    const fallbackLogoUrl = image.dataset.fallbackLogo;
-
-    if (fallbackLogoUrl) {
-        image.dataset.fallbackLogo = '';
-        image.src = fallbackLogoUrl;
-        return;
-    }
-
     image.remove();
 }
 
@@ -1359,12 +1340,7 @@ function getCompanyAvatarHtml(company, name) {
         return `<div class="user-avatar company-avatar" style="border-radius: 8px;"><span>${initial}</span></div>`;
     }
 
-    const fallbackLogoUrl = getCompanyLogoFallbackUrl(company, logoUrl);
-    const fallbackData = fallbackLogoUrl
-        ? ` data-fallback-logo="${escapeHtmlAttribute(fallbackLogoUrl)}"`
-        : '';
-
-    return `<div class="user-avatar company-avatar" style="border-radius: 8px;"><span>${initial}</span><img src="${escapeHtmlAttribute(logoUrl)}"${fallbackData} alt="${escapeHtmlAttribute(name)}" onerror="handleCompanyLogoError(this)"></div>`;
+    return `<div class="user-avatar company-avatar" style="border-radius: 8px;"><span>${initial}</span><img src="${escapeHtmlAttribute(logoUrl)}" alt="${escapeHtmlAttribute(name)}" onerror="handleCompanyLogoError(this)"></div>`;
 }
 
 function renderCompanyTable(data) {
