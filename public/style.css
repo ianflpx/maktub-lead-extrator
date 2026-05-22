@@ -667,6 +667,15 @@ input:focus {
     object-fit: cover;
 }
 
+.company-avatar {
+    position: relative;
+}
+
+.company-avatar img {
+    position: absolute;
+    inset: 0;
+}
+
 .user-details strong {
     display: block;
     font-size: 0.95rem;

@@ -64,6 +64,8 @@ const empresaSchema = new mongoose.Schema({
     country: String,
     linkedinUrl: { type: String, unique: true }, // usar linkedinUrl como chave
     url: String, // fallback
+    website: String,
+    websiteUrl: String,
     logoUrl: String,
     logo: String,
     description: String,

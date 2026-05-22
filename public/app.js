@@ -1296,6 +1296,77 @@ function getCountryISO(countryName) {
     return null;
 }
 
+function getWebsiteLogoFallback(company) {
+    const website = company.website || company.websiteUrl || '';
+    if (!website) return '';
+
+    try {
+        const parsedUrl = new URL(website.startsWith('http') ? website : `https://${website}`);
+        if (parsedUrl.hostname.includes('linkedin.com')) return '';
+        return `https://www.google.com/s2/favicons?domain=${encodeURIComponent(parsedUrl.hostname)}&sz=128`;
+    } catch (_) {
+        return '';
+    }
+}
+
+function isExpiredLinkedInLogo(url) {
+    if (!url || !url.includes('media.licdn.com')) return false;
+
+    try {
+        const expiresAt = Number(new URL(url).searchParams.get('e'));
+        return Number.isFinite(expiresAt) && expiresAt * 1000 <= Date.now();
+    } catch (_) {
+        return false;
+    }
+}
+
+function getCompanyLogoUrl(company) {
+    const linkedinLogo = company.logoUrl || company.logo || '';
+    if (linkedinLogo && !isExpiredLinkedInLogo(linkedinLogo)) return linkedinLogo;
+    return getWebsiteLogoFallback(company);
+}
+
+function escapeHtmlAttribute(value) {
+    return String(value || '')
+        .replace(/&/g, '&amp;')
+        .replace(/"/g, '&quot;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;');
+}
+
+function getCompanyLogoFallbackUrl(company, logoUrl) {
+    const websiteLogo = getWebsiteLogoFallback(company);
+    return websiteLogo && websiteLogo !== logoUrl ? websiteLogo : '';
+}
+
+function handleCompanyLogoError(image) {
+    const fallbackLogoUrl = image.dataset.fallbackLogo;
+
+    if (fallbackLogoUrl) {
+        image.dataset.fallbackLogo = '';
+        image.src = fallbackLogoUrl;
+        return;
+    }
+
+    image.remove();
+}
+
+function getCompanyAvatarHtml(company, name) {
+    const initial = escapeHtmlAttribute(name.charAt(0).toUpperCase());
+    const logoUrl = getCompanyLogoUrl(company);
+
+    if (!logoUrl) {
+        return `<div class="user-avatar company-avatar" style="border-radius: 8px;"><span>${initial}</span></div>`;
+    }
+
+    const fallbackLogoUrl = getCompanyLogoFallbackUrl(company, logoUrl);
+    const fallbackData = fallbackLogoUrl
+        ? ` data-fallback-logo="${escapeHtmlAttribute(fallbackLogoUrl)}"`
+        : '';
+
+    return `<div class="user-avatar company-avatar" style="border-radius: 8px;"><span>${initial}</span><img src="${escapeHtmlAttribute(logoUrl)}"${fallbackData} alt="${escapeHtmlAttribute(name)}" onerror="handleCompanyLogoError(this)"></div>`;
+}
+
 function renderCompanyTable(data) {
     if (!companyResultsBody) return;
     if (data.length === 0) {
@@ -1315,7 +1386,6 @@ function renderCompanyTable(data) {
     companyResultsBody.innerHTML = '';
 
     data.forEach((company, index) => {
-        const logoUrl = company.logoUrl || company.logo || '';
         const name = company.name || company.title || 'N/A';
         const industry = company._maktubType || company.industry || company.type || companyTypeInput.value || 'N/A';
         const rawLocation = company.location?.linkedinText
@@ -1333,7 +1403,7 @@ function renderCompanyTable(data) {
 
         const row = document.createElement('tr');
 
-        let avatarHtml = `<div class="user-avatar" style="border-radius: 8px; overflow: hidden; position: relative;">${name.charAt(0).toUpperCase()}${logoUrl ? `<img src="${logoUrl}" alt="${name}" onerror="this.remove()" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; object-fit: cover;">` : ''}</div>`;
+        const avatarHtml = getCompanyAvatarHtml(company, name);
 
         const isSaved = globalHistoryCompanies.some(c => 
             (c.linkedinUrl === profileUrl && profileUrl !== '#') || 
@@ -1966,7 +2036,6 @@ function renderHistoryCompanyTable(data) {
     companyHistoryResultsBody.innerHTML = '';
 
     data.forEach(company => {
-        const logoUrl = company.logoUrl || company.logo || '';
         const name = company.name || company.title || 'N/A';
         const industry = company._maktubType || company.industry || company.type || 'N/A';
         const rawLocation = company.location?.linkedinText
@@ -1984,7 +2053,7 @@ function renderHistoryCompanyTable(data) {
 
         const row = document.createElement('tr');
 
-        let avatarHtml = `<div class="user-avatar" style="border-radius: 8px; overflow: hidden; position: relative;">${name.charAt(0).toUpperCase()}${logoUrl ? `<img src="${logoUrl}" alt="${name}" onerror="this.remove()" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; object-fit: cover;">` : ''}</div>`;
+        const avatarHtml = getCompanyAvatarHtml(company, name);
 
         row.innerHTML = `
             <td>
