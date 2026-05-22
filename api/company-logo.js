@@ -1,12 +1,12 @@
 const { connectToDatabase } = require('../lib/mongodb');
 const { Empresa } = require('../lib/models');
 
-const linkedinMediaHost = /(^|\.)media\.licdn\.com$/i;
+const linkedinAssetHost = /^(media|static)\.licdn\.com$/i;
 
 function isLinkedInLogoUrl(value) {
     try {
         const url = new URL(value);
-        return url.protocol === 'https:' && linkedinMediaHost.test(url.hostname);
+        return url.protocol === 'https:' && linkedinAssetHost.test(url.hostname);
     } catch (_) {
         return false;
     }
