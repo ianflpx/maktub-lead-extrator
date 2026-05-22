@@ -1,8 +1,9 @@
 let APIFY_TOKEN = localStorage.getItem('apify_token') || '';
+let ICYPEAS_TOKEN = localStorage.getItem('icypeas_token') || '';
+let LINKEDIN_COOKIE = localStorage.getItem('linkedin_cookie') || '';
 const EMPLOYEES_ACTOR_ID = 'harvestapi~linkedin-company-employees';
 const PROFILE_SEARCH_ACTOR_ID = 'harvestapi~linkedin-profile-search';
 const COMPANY_ACTOR_ID = 'harvestapi~linkedin-company-search';
-const ENRICHMENT_ACTOR_ID = 'bebity~linkedin-email-finder'; // better API actor
 
 const COMPANY_TYPE_KEYWORDS = {
     "Operator": "apostas esportivas cassino online bet brasil operadora sportsbook bets licenciado",
@@ -459,35 +460,79 @@ async function checkApiConnection() {
     apiKeyInput.disabled = true;
     refreshConnectionBtn.disabled = true;
 
+    // Checa Apify
     try {
         const response = await fetch('https://api.apify.com/v2/users/me?token=' + APIFY_TOKEN);
         if (response.ok) {
             const data = await response.json();
-            connectionStatusTitle.textContent = 'Conectado';
+            connectionStatusTitle.textContent = 'Apify: Conectado';
             connectionStatusText.textContent = 'Autenticado como ' + (data.data.username || 'Usuário Apify');
             connectionStatusDot.className = 'status-dot online';
         } else {
             throw new Error('Chave inválida ou erro na API');
         }
     } catch (error) {
-        connectionStatusTitle.textContent = 'Desconectado';
-        connectionStatusText.textContent = 'A chave da API é inválida ou expirou';
+        connectionStatusTitle.textContent = 'Apify: Desconectado';
+        connectionStatusText.textContent = 'A chave da API Apify é inválida ou expirou';
         connectionStatusDot.className = 'status-dot error';
     } finally {
         apiKeyInput.disabled = false;
         refreshConnectionBtn.disabled = false;
+    }
+
+    // Checa Icypeas
+    const icypeasStatusEl = document.getElementById('icypeasStatusText');
+    const icypeasKeyInput = document.getElementById('icypeasKeyInput');
+    if (icypeasStatusEl && icypeasKeyInput) {
+        icypeasKeyInput.value = ICYPEAS_TOKEN;
+        if (ICYPEAS_TOKEN) {
+            icypeasStatusEl.textContent = 'Icypeas Key configurada ✓';
+            icypeasStatusEl.style.color = 'var(--success, #10b981)';
+        } else {
+            icypeasStatusEl.textContent = 'Icypeas Key não configurada';
+            icypeasStatusEl.style.color = 'var(--danger, #ef4444)';
+        }
+    }
+
+    // Checa cookie LinkedIn
+    const linkedinCookieInput = document.getElementById('linkedinCookieInput');
+    const linkedinCookieStatus = document.getElementById('linkedinCookieStatus');
+    if (linkedinCookieInput) linkedinCookieInput.value = LINKEDIN_COOKIE;
+    if (linkedinCookieStatus) {
+        if (LINKEDIN_COOKIE) {
+            linkedinCookieStatus.textContent = 'Cookie configurado ✓';
+            linkedinCookieStatus.style.color = 'var(--success, #10b981)';
+        } else {
+            linkedinCookieStatus.textContent = 'Cookie não configurado — extração pode falhar';
+            linkedinCookieStatus.style.color = 'var(--danger, #ef4444)';
+        }
     }
 }
 
 if (connectionForm) {
     connectionForm.addEventListener('submit', (e) => {
         e.preventDefault();
-        const newKey = apiKeyInput.value.trim();
+        const newApifyKey = apiKeyInput.value.trim();
+        const icypeasKeyInput = document.getElementById('icypeasKeyInput');
+        const newIcypeasKey = icypeasKeyInput ? icypeasKeyInput.value.trim() : '';
+        const linkedinCookieInput = document.getElementById('linkedinCookieInput');
+        const newLinkedinCookie = linkedinCookieInput ? linkedinCookieInput.value.trim() : '';
 
-        if (newKey) {
-            APIFY_TOKEN = newKey;
-            localStorage.setItem('apify_token', newKey);
-            showToast('Chave de API salva com sucesso!');
+        if (newApifyKey) {
+            APIFY_TOKEN = newApifyKey;
+            localStorage.setItem('apify_token', newApifyKey);
+        }
+        if (newIcypeasKey) {
+            ICYPEAS_TOKEN = newIcypeasKey;
+            localStorage.setItem('icypeas_token', newIcypeasKey);
+        }
+        if (newLinkedinCookie) {
+            LINKEDIN_COOKIE = newLinkedinCookie;
+            localStorage.setItem('linkedin_cookie', newLinkedinCookie);
+        }
+
+        if (newApifyKey || newIcypeasKey || newLinkedinCookie) {
+            showToast('Configurações salvas com sucesso!');
             checkApiConnection();
         }
     });
@@ -498,8 +543,38 @@ if (toggleApiKey) {
     toggleApiKey.addEventListener('click', () => {
         const type = apiKeyInput.getAttribute('type') === 'password' ? 'text' : 'password';
         apiKeyInput.setAttribute('type', type);
-
         const icon = toggleApiKey.querySelector('i');
+        if (type === 'text') {
+            icon.classList.remove('ph-eye');
+            icon.classList.add('ph-eye-slash');
+        } else {
+            icon.classList.remove('ph-eye-slash');
+            icon.classList.add('ph-eye');
+        }
+    });
+}
+
+const toggleLinkedinCookie = document.getElementById('toggleLinkedinCookie');
+if (toggleLinkedinCookie) {
+    toggleLinkedinCookie.addEventListener('click', () => {
+        const input = document.getElementById('linkedinCookieInput');
+        if (!input) return;
+        const type = input.getAttribute('type') === 'password' ? 'text' : 'password';
+        input.setAttribute('type', type);
+        const icon = toggleLinkedinCookie.querySelector('i');
+        icon.classList.toggle('ph-eye', type === 'password');
+        icon.classList.toggle('ph-eye-slash', type === 'text');
+    });
+}
+
+const toggleIcypeasKey = document.getElementById('toggleIcypeasKey');
+if (toggleIcypeasKey) {
+    toggleIcypeasKey.addEventListener('click', () => {
+        const icypeasKeyInput = document.getElementById('icypeasKeyInput');
+        if (!icypeasKeyInput) return;
+        const type = icypeasKeyInput.getAttribute('type') === 'password' ? 'text' : 'password';
+        icypeasKeyInput.setAttribute('type', type);
+        const icon = toggleIcypeasKey.querySelector('i');
         if (type === 'text') {
             icon.classList.remove('ph-eye');
             icon.classList.add('ph-eye-slash');
@@ -743,33 +818,50 @@ async function runExtractionPipeline(companyName, companyDomain = null, companyL
         // ── ETAPA 1: Rodar os dois actors em paralelo (double-check) ──
         updateStatus('active', 'Buscando Funcionários', 'Consultando 2 fontes simultâneas...');
 
+        // Normaliza o cookie: garante formato "li_at=VALUE"
+        const cookieStr = LINKEDIN_COOKIE
+            ? (LINKEDIN_COOKIE.startsWith('li_at=') ? LINKEDIN_COOKIE : `li_at=${LINKEDIN_COOKIE}`)
+            : null;
+
+        // harvestapi~linkedin-profile-search
         const primaryPayload = {
-            currentCompanies: [companySlugShort],
+            currentCompanies: [companySlug, companySlugShort],
             profileScraperMode: 'Short',
-            maxItems: 60
+            maxResults: 60
         };
         if (role) primaryPayload.currentJobTitles = [role];
+        if (cookieStr) primaryPayload.cookie = cookieStr;
 
+        // harvestapi~linkedin-company-employees
+        // aponta pra /people/ que é onde o LinkedIn lista os funcionários
+        const peopleUrl = companySlug.replace(/\/?$/, '/') + 'people/';
         const fallbackPayload = {
-            companies: [companySlug],
+            startUrls: [{ url: peopleUrl }],
             profileScraperMode: 'Short ($4 per 1k)',
-            maxItems: 60
+            maxResults: 60
         };
         if (role) fallbackPayload.jobTitles = [role];
+        if (cookieStr) fallbackPayload.cookie = cookieStr;
 
-        console.log('[Pipeline] Rodando profile-search e company-employees em paralelo...');
+        console.log('[Pipeline] Payloads enviados:');
+        console.log('[Pipeline] profile-search →', JSON.stringify(primaryPayload));
+        console.log('[Pipeline] company-employees →', JSON.stringify(fallbackPayload));
+
         const [primaryItems, fallbackItems] = await Promise.all([
             runActor(PROFILE_SEARCH_ACTOR_ID, primaryPayload).catch(err => {
-                console.warn('[Pipeline] Actor principal falhou:', err.message);
+                console.warn('[Pipeline] Actor profile-search falhou:', err.message);
                 return [];
             }),
             runActor(EMPLOYEES_ACTOR_ID, fallbackPayload).catch(err => {
-                console.warn('[Pipeline] Actor fallback falhou:', err.message);
+                console.warn('[Pipeline] Actor company-employees falhou:', err.message);
                 return [];
             })
         ]);
 
-        console.log(`[Pipeline] Profile-search: ${primaryItems.length} | Company-employees: ${fallbackItems.length}`);
+        console.log(`[Pipeline] Resultados — profile-search: ${primaryItems.length} | company-employees: ${fallbackItems.length}`);
+        if (primaryItems.length === 0 && fallbackItems.length === 0) {
+            console.warn('[Pipeline] Ambos actors retornaram 0. Verifique os payloads acima no console.');
+        }
 
         // ── Cross-check: unir os dois resultados com deduplicação por publicIdentifier/linkedinUrl ──
         const profileMap = new Map();
@@ -840,8 +932,9 @@ async function runExtractionPipeline(companyName, companyDomain = null, companyL
         }
 
         if (datasetItems.length === 0) {
-            updateStatus('error', 'LinkedIn Bloqueou', 'O LinkedIn limitou a extração desta empresa. Tente novamente em alguns minutos ou use um filtro de cargo.');
-            showToast(`LinkedIn bloqueou a extração. Tente adicionar um cargo no filtro (ex: "Marketing Manager") ou aguarde alguns minutos e tente novamente.`, 'error');
+            console.error('[Pipeline] 0 resultados. Verifique no console os payloads enviados e confirme que a URL da empresa está correta.');
+            updateStatus('error', 'Sem Resultados', 'Nenhum funcionário retornado. Verifique a URL da empresa ou tente com um filtro de cargo.');
+            showToast('Nenhum resultado. Abra o console (F12) para ver os detalhes e confirme que a URL do LinkedIn está correta.', 'error');
             renderTable([]);
             setFormState(false);
             return;
@@ -1002,85 +1095,93 @@ form.addEventListener('submit', (e) => {
 if (searchBtn) searchBtn.addEventListener('click', handleExtract);
 
 
+// ── Icypeas enrichment: busca email por LinkedIn URL ou nome + empresa ──
+async function enrichLeadWithIcypeas(lead) {
+    if (!ICYPEAS_TOKEN) return null;
+    try {
+        // Monta o body: prioriza LinkedIn URL, cai para nome + empresa como fallback
+        const body = lead.linkedinUrl
+            ? { linkedin: lead.linkedinUrl }
+            : {
+                firstname: lead.firstName || '',
+                lastname: lead.lastName || '',
+                domainOrCompany: lead.companyName || ''
+              };
+
+        const res = await fetch('https://app.icypeas.com/api/email-search', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${ICYPEAS_TOKEN}`
+            },
+            body: JSON.stringify(body)
+        });
+
+        if (!res.ok) {
+            console.warn(`[Icypeas] HTTP ${res.status} para ${lead.linkedinUrl || lead.fullName}`);
+            return null;
+        }
+
+        const data = await res.json();
+
+        // Suporta os dois formatos de resposta da Icypeas
+        const email = data?.item?.emails?.[0]
+            || data?.data?.email
+            || data?.email
+            || '';
+
+        if (!email) return null;
+        return { email, emails: [email], phone: '' };
+    } catch (err) {
+        console.warn('[Icypeas] Erro ao enriquecer:', lead.linkedinUrl, err.message);
+        return null;
+    }
+}
+
 if (pullDataBtn) {
     pullDataBtn.addEventListener('click', async () => {
         if (!globalLeads || globalLeads.length === 0) return;
-        
+
+        if (!ICYPEAS_TOKEN) {
+            showToast('Configure sua Icypeas API Key na aba Conexão antes de puxar dados.', 'error');
+            return;
+        }
+
         pullDataBtn.disabled = true;
         searchBtn.disabled = true;
-        
+
         const originalPullBtnContent = pullDataBtn.innerHTML;
         pullDataBtn.innerHTML = '<span style="display: flex; align-items: center; gap: 0.5rem;"><div class="spinner" style="margin: 0; width: 16px; height: 16px; border-width: 2px;"></div> Puxando...</span>';
 
-        updateStatus('active', 'Buscando Contatos (Apify)', `Procurando dados para ${globalLeads.length} leads...`);
-        
-        // Puxar emails da Apify com api de enriquecimento
-        const enrichmentInput = {
-            profileUrls: globalLeads.map(p => p.linkedinUrl).filter(Boolean),
-            startUrls: globalLeads.map(p => ({
-                url: p.linkedinUrl,
-                id: p.linkedinUrl
-            })).filter(p => p.url)
-        };
+        updateStatus('active', 'Buscando Emails (Icypeas)', `Enriquecendo 0/${globalLeads.length} leads...`);
 
-        let enrichedProfiles = [];
-        try {
-            const enrichRunRes = await fetch(`https://api.apify.com/v2/acts/${ENRICHMENT_ACTOR_ID}/runs?token=${APIFY_TOKEN}`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(enrichmentInput)
-            });
+        const enrichedMap = new Map();
 
-            if (enrichRunRes.ok) {
-                const enrichRunData = await enrichRunRes.json();
-                const enrichRunId = enrichRunData.data.id;
-                const enrichDatasetId = enrichRunData.data.defaultDatasetId;
+        for (let i = 0; i < globalLeads.length; i++) {
+            const lead = globalLeads[i];
 
-                let enrichRunning = true;
-                while (enrichRunning) {
-                    await new Promise(resolve => setTimeout(resolve, 4000));
-                    const enrichStatusRes = await fetch(`https://api.apify.com/v2/actor-runs/${enrichRunId}?token=${APIFY_TOKEN}`);
-                    const enrichStatusData = await enrichStatusRes.json();
-                    const enrichStatus = enrichStatusData.data.status;
-                    if (enrichStatus === 'SUCCEEDED') enrichRunning = false;
-                    else if (['FAILED', 'ABORTED', 'TIMED-OUT'].includes(enrichStatus)) {
-                        console.warn('Enriquecimento falhou ou retornou erro na Apify.');
-                        enrichRunning = false;
-                    }
-                }
+            updateStatus('active', 'Buscando Emails (Icypeas)', `Enriquecendo ${i + 1}/${globalLeads.length} leads...`);
 
-                const enrichDatasetRes = await fetch(`https://api.apify.com/v2/datasets/${enrichDatasetId}/items?token=${APIFY_TOKEN}`);
-                enrichedProfiles = await enrichDatasetRes.json();
+            const result = await enrichLeadWithIcypeas(lead);
+            const mapKey = lead.linkedinUrl || lead.fullName || i;
+            if (result) enrichedMap.set(mapKey, result);
+
+            // Respeita rate limit da Icypeas
+            if (i < globalLeads.length - 1) {
+                await new Promise(resolve => setTimeout(resolve, 300));
             }
-        } catch (enrichError) {
-            console.error('Etapa de enriquecimento falhou:', enrichError);
-            showToast('Erro ao buscar emails.', 'error');
-            updateStatus('error', 'Falha', 'Não foi possível rodar o enriquecimento.');
-            pullDataBtn.innerHTML = originalPullBtnContent;
-            pullDataBtn.disabled = false;
-            searchBtn.disabled = false;
-            return;
         }
 
         updateStatus('active', 'Finalizando', 'Atualizando resultados...');
 
-        globalLeads = globalLeads.map(emp => {
-            const enriched = enrichedProfiles.find(e =>
-                (e.id && e.id === emp.linkedinUrl) ||
-                (e.url && e.url === emp.linkedinUrl) ||
-                (e.linkedinUrl && e.linkedinUrl === emp.linkedinUrl) ||
-                (e.firstName && e.firstName.toLowerCase() === (emp.firstName || '').toLowerCase() &&
-                 e.lastName && e.lastName.toLowerCase() === (emp.lastName || '').toLowerCase())
-            );
-            
-            const newEmail = enriched?.email || enriched?.emails?.[0] || emp.email || '';
-            const newEmailsArray = enriched?.emails || (enriched?.email ? [enriched.email] : (emp.email ? [emp.email] : []));
-            
+        globalLeads = globalLeads.map((emp, i) => {
+            const mapKey = emp.linkedinUrl || emp.fullName || i;
+            const enriched = enrichedMap.get(mapKey);
             return {
                 ...emp,
-                email: newEmail,
-                phone: enriched?.phone || enriched?.phones?.[0] || emp.phone || '',
-                emails: newEmailsArray
+                email: enriched?.email || emp.email || '',
+                emails: enriched?.emails?.length ? enriched.emails : (emp.email ? [emp.email] : []),
+                phone: emp.phone || ''
             };
         });
 
@@ -1091,9 +1192,9 @@ if (pullDataBtn) {
         pullDataBtn.disabled = false;
         searchBtn.disabled = false;
 
-        const withEmail = globalLeads.filter(l => l.email && l.email !== 'N/A').length;
-        showToast(`Extração finalizada: ${withEmail} emails encontrados.`);
-        updateStatus('success', 'Finalizado', 'Dados enriquecidos com sucesso!');
+        const withEmail = globalLeads.filter(l => l.email && l.email !== 'N/A' && l.email !== '').length;
+        showToast(`Enriquecimento finalizado: ${withEmail}/${globalLeads.length} emails encontrados.`);
+        updateStatus('success', 'Finalizado', 'Emails enriquecidos com sucesso!');
     });
 }
 
@@ -1213,7 +1314,7 @@ function renderCompanyTable(data) {
 
     companyResultsBody.innerHTML = '';
 
-    data.forEach(company => {
+    data.forEach((company, index) => {
         const logoUrl = company.logoUrl || company.logo || '';
         const name = company.name || company.title || 'N/A';
         const industry = company._maktubType || company.industry || company.type || companyTypeInput.value || 'N/A';
@@ -1232,19 +1333,16 @@ function renderCompanyTable(data) {
 
         const row = document.createElement('tr');
 
-        let avatarHtml = `<div class="user-avatar" style="border-radius: 8px;">${name.charAt(0).toUpperCase()}</div>`;
-        if (logoUrl) {
-            avatarHtml = `<div class="user-avatar" style="border-radius: 8px; overflow: hidden;"><img src="${logoUrl}" alt="${name}" onerror="this.style.display='none'" style="width: 100%; height: 100%; object-fit: cover;"></div>`;
-        }
+        let avatarHtml = `<div class="user-avatar" style="border-radius: 8px; overflow: hidden; position: relative;">${name.charAt(0).toUpperCase()}${logoUrl ? `<img src="${logoUrl}" alt="${name}" onerror="this.remove()" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; object-fit: cover;">` : ''}</div>`;
 
         const isSaved = globalHistoryCompanies.some(c => 
             (c.linkedinUrl === profileUrl && profileUrl !== '#') || 
             (c.name === name)
         );
 
-        const statusHtml = isSaved 
-            ? `<div class="status-indicator" title="Já salva no bando"><i class="ph-bold ph-checks" style="color: var(--brand-primary); font-size: 1.4rem;"></i></div>` 
-            : `<div class="status-indicator" title="Empresa nova" style="opacity: 0.2;"><i class="ph-bold ph-plus" style="font-size: 1rem;"></i></div>`;
+        const statusHtml = isSaved
+            ? `<div class="status-indicator" title="Já salva no banco"><i class="ph-bold ph-checks" style="color: var(--brand-primary); font-size: 1.4rem;"></i></div>`
+            : `<div class="status-indicator save-company-btn" data-index="${index}" title="Salvar empresa" style="opacity: 0.35; cursor: pointer; transition: opacity 0.2s;"><i class="ph-bold ph-plus" style="font-size: 1rem;"></i></div>`;
 
         row.innerHTML = `
             <td style="text-align: center;">
@@ -1290,6 +1388,34 @@ function renderCompanyTable(data) {
                 } catch (err) { }
             }
             showExtractConfirm(companyName, companyDomain, companyLinkedinUrl);
+        });
+    });
+
+    document.querySelectorAll('.save-company-btn').forEach(btn => {
+        btn.addEventListener('click', async (e) => {
+            const el = e.currentTarget;
+            const idx = parseInt(el.dataset.index);
+            const company = globalCompanies[idx];
+            if (!company) return;
+
+            el.innerHTML = `<div class="spinner" style="width:16px;height:16px;border-width:2px;border-top-color:var(--brand-primary);margin:0;"></div>`;
+            el.style.opacity = '1';
+            el.style.cursor = 'default';
+            el.classList.remove('save-company-btn');
+
+            const success = await saveCompaniesToDb([company]);
+            if (success) {
+                el.innerHTML = `<i class="ph-bold ph-checks" style="color: var(--brand-primary); font-size: 1.4rem;"></i>`;
+                el.title = 'Já salva no banco';
+                globalHistoryCompanies.push(company);
+                showToast(`${company.name || company.title} salva!`);
+            } else {
+                el.innerHTML = `<i class="ph-bold ph-plus" style="font-size: 1rem;"></i>`;
+                el.style.opacity = '0.35';
+                el.style.cursor = 'pointer';
+                el.classList.add('save-company-btn');
+                showToast('Erro ao salvar empresa.', 'error');
+            }
         });
     });
 }
@@ -1513,7 +1639,6 @@ if (companyExtractForm) {
             datasetItems = finalItems;
             globalCompanies = datasetItems;
             renderCompanyTable(datasetItems);
-            saveCompaniesToDb(datasetItems);
 
             if (totalCompaniesEl) totalCompaniesEl.textContent = datasetItems.length;
             if (exportCompanyBtn && datasetItems.length > 0) exportCompanyBtn.disabled = false;
@@ -1599,7 +1724,7 @@ async function saveLeadsToDb(leads) {
 }
 
 async function saveCompaniesToDb(companies) {
-    if (!companies || companies.length === 0) return;
+    if (!companies || companies.length === 0) return false;
 
     try {
         const apiUrl = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1' || window.location.protocol === 'file:'
@@ -1614,9 +1739,12 @@ async function saveCompaniesToDb(companies) {
 
         if (!response.ok) {
             console.error('Falha ao salvar empresas no backend');
+            return false;
         }
+        return true;
     } catch (error) {
         console.error('Erro de conexão com o backend ao salvar empresas:', error);
+        return false;
     }
 }
 
@@ -1856,10 +1984,7 @@ function renderHistoryCompanyTable(data) {
 
         const row = document.createElement('tr');
 
-        let avatarHtml = `<div class="user-avatar" style="border-radius: 8px;">${name.charAt(0).toUpperCase()}</div>`;
-        if (logoUrl) {
-            avatarHtml = `<div class="user-avatar" style="border-radius: 8px; overflow: hidden;"><img src="${logoUrl}" alt="${name}" onerror="this.style.display='none'" style="width: 100%; height: 100%; object-fit: cover;"></div>`;
-        }
+        let avatarHtml = `<div class="user-avatar" style="border-radius: 8px; overflow: hidden; position: relative;">${name.charAt(0).toUpperCase()}${logoUrl ? `<img src="${logoUrl}" alt="${name}" onerror="this.remove()" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; object-fit: cover;">` : ''}</div>`;
 
         row.innerHTML = `
             <td>
@@ -1878,9 +2003,14 @@ function renderHistoryCompanyTable(data) {
                 </a>
             </td>
             <td style="text-align: center;">
-                <button class="btn btn-extract-action history-extract-leads-btn" data-company="${encodeURIComponent(name)}" title="Buscar Leads desta Empresa">
-                    EXTRAIR
-                </button>
+                <div style="display: flex; gap: 0.5rem; justify-content: center; align-items: center;">
+                    <button class="btn btn-extract-action history-extract-leads-btn" data-company="${encodeURIComponent(name)}" title="Buscar Leads desta Empresa">
+                        EXTRAIR
+                    </button>
+                    <button class="btn history-delete-company-btn" data-id="${company._id}" title="Deletar empresa do banco de dados" style="padding: 0.4rem 0.6rem; background: transparent; border: none; color: rgba(239,68,68,0.7); cursor: pointer; transition: all 0.2s;">
+                        <i class="ph-bold ph-trash" style="font-size: 0.9rem;"></i>
+                    </button>
+                </div>
             </td>
         `;
         companyHistoryResultsBody.appendChild(row);
@@ -1901,6 +2031,31 @@ function renderHistoryCompanyTable(data) {
                 } catch (err) { }
             }
             showExtractConfirm(companyName, companyDomain, companyLinkedinUrl);
+        });
+    });
+
+    document.querySelectorAll('.history-delete-company-btn').forEach(btn => {
+        btn.addEventListener('click', async (e) => {
+            const id = e.currentTarget.dataset.id;
+            if (!id) return;
+
+            const apiUrl = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1' || window.location.protocol === 'file:'
+                ? `http://localhost:3000/api/empresas/${id}`
+                : `/api/empresas/${id}`;
+
+            try {
+                const res = await fetch(apiUrl, { method: 'DELETE' });
+                if (!res.ok) {
+                    const body = await res.json().catch(() => ({}));
+                    throw new Error(body.error || `HTTP ${res.status}`);
+                }
+                globalHistoryCompanies = globalHistoryCompanies.filter(c => String(c._id) !== id);
+                showToast('Empresa deletada com sucesso!');
+                filterHistoryCompanyTable();
+            } catch (err) {
+                console.error('Erro ao deletar empresa:', err);
+                showToast(`Erro ao deletar: ${err.message}`, 'error');
+            }
         });
     });
 }

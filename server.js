@@ -13,7 +13,7 @@ app.use(cors());
 app.use(express.json({ limit: '50mb' }));
 
 // MongoDB Connection
-mongoose.connect(process.env.MONGODB_URI)
+mongoose.connect(process.env.MONGODB_URI, { family: 4 })
     .then(() => console.log('✅ Conectado ao MongoDB Atlas'))
     .catch(err => console.error('❌ Erro ao conectar ao MongoDB:', err));
 
@@ -34,9 +34,10 @@ const leadSchema = new mongoose.Schema({
     currentPosition: mongoose.Schema.Types.Mixed,
     tier: Number,
     extractedAt: { type: Date, default: Date.now }
-}, { 
-    collection: 'leads', // Força o uso da coleção 'leads' como solicitado
-    timestamps: true 
+}, {
+    collection: 'leads',
+    timestamps: true,
+    strict: false
 });
 
 const Lead = mongoose.model('Lead', leadSchema);
@@ -61,9 +62,10 @@ const empresaSchema = new mongoose.Schema({
     description: String,
     summary: String,
     extractedAt: { type: Date, default: Date.now }
-}, { 
+}, {
     collection: 'empresas',
-    timestamps: true 
+    timestamps: true,
+    strict: false
 });
 
 const Empresa = mongoose.model('Empresa', empresaSchema);
@@ -179,6 +181,16 @@ app.get('/api/empresas', async (req, res) => {
     }
 });
 
+app.delete('/api/empresas/:id', async (req, res) => {
+    try {
+        const result = await Empresa.findByIdAndDelete(req.params.id);
+        if (!result) return res.status(404).json({ error: 'Empresa não encontrada' });
+        res.json({ message: 'Empresa deletada com sucesso' });
+    } catch (error) {
+        res.status(500).json({ error: 'Erro ao deletar empresa', details: error.message });
+    }
+});
+
 app.get('/api/empresas/urls', async (req, res) => {
     try {
         const empresas = await Empresa.find({}, { linkedinUrl: 1, url: 1, name: 1, _id: 0 });
@@ -186,6 +198,53 @@ app.get('/api/empresas/urls', async (req, res) => {
         res.json(urls);
     } catch (error) {
         res.status(500).json({ error: 'Erro ao buscar URLs' });
+    }
+});
+
+// Refresh expired LinkedIn logos in bulk
+app.post('/api/empresas/refresh-logos', async (req, res) => {
+    try {
+        const empresas = await Empresa.find({ linkedinUrl: { $exists: true } });
+        let updated = 0;
+        let failed = 0;
+
+        const fetchFreshLogo = async (linkedinUrl) => {
+            try {
+                const resp = await fetch(linkedinUrl, {
+                    headers: {
+                        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+                        'Accept': 'text/html'
+                    },
+                    signal: AbortSignal.timeout(8000)
+                });
+                if (!resp.ok) return null;
+                const html = await resp.text();
+                const match = html.match(/og:image"\s+content="([^"]+)"/);
+                return match ? match[1].replace(/&amp;/g, '&') : null;
+            } catch {
+                return null;
+            }
+        };
+
+        // Process in batches of 5 to avoid rate limiting
+        for (let i = 0; i < empresas.length; i += 5) {
+            const batch = empresas.slice(i, i + 5);
+            await Promise.all(batch.map(async (emp) => {
+                const freshLogo = await fetchFreshLogo(emp.linkedinUrl);
+                if (freshLogo) {
+                    await Empresa.updateOne({ _id: emp._id }, { $set: { logo: freshLogo, logoUrl: freshLogo } });
+                    updated++;
+                } else {
+                    failed++;
+                }
+            }));
+            // Small delay between batches
+            if (i + 5 < empresas.length) await new Promise(r => setTimeout(r, 500));
+        }
+
+        res.json({ message: 'Logos atualizadas', updated, failed, total: empresas.length });
+    } catch (error) {
+        res.status(500).json({ error: 'Erro ao atualizar logos', details: error.message });
     }
 });
 

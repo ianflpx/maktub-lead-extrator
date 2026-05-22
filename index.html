@@ -364,14 +364,15 @@
       <div id="connection-view" style="display: none;">
         <header class="top-header">
           <div class="page-title">
-            <h1>Conexão Apify</h1>
-            <p>Gerencie sua chave de API para habilitar a extração de leads.</p>
+            <h1>Conexão APIs</h1>
+            <p>Gerencie suas chaves de API para extração e enriquecimento de leads.</p>
           </div>
         </header>
 
         <section class="panel" style="margin-top: 1rem;">
+          <!-- Status Apify -->
           <div class="stat-card status-card" id="connectionStatusCard"
-            style="margin-bottom: 2rem; max-width: 450px; padding: 1.5rem; display: flex; align-items: center; gap: 1.5rem; border: 1px solid var(--border-color); border-radius: 4px;">
+            style="margin-bottom: 1.5rem; max-width: 450px; padding: 1.5rem; display: flex; align-items: center; gap: 1.5rem; border: 1px solid var(--border-color); border-radius: 4px;">
             <div class="status-dot-container">
               <div class="status-dot" id="connectionStatusDot"></div>
             </div>
@@ -382,20 +383,68 @@
           </div>
 
           <form id="connectionForm">
-            <div class="input-group" style="margin-bottom: 1.5rem;">
-              <label for="apiKeyInput"><i class="las la-key"></i> Chave da API Apify</label>
-              <div class="input-with-icon">
-                <input type="password" id="apiKeyInput" placeholder="Sua Apify API Token" required
-                  style="width: 100%; max-width: 500px; padding-right: 3rem;">
-                <button type="button" class="input-toggle-btn" id="toggleApiKey">
-                  <i class="ph-bold ph-eye"></i>
-                </button>
+            <!-- Apify Key -->
+            <div style="margin-bottom: 2rem; padding-bottom: 2rem; border-bottom: 1px solid var(--border-color);">
+              <h3 style="margin-bottom: 1rem; font-size: 0.95rem; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.05em;">
+                <i class="las la-robot"></i> Apify — Extração LinkedIn
+              </h3>
+              <div class="input-group" style="margin-bottom: 0;">
+                <label for="apiKeyInput"><i class="las la-key"></i> API Token</label>
+                <div class="input-with-icon">
+                  <input type="password" id="apiKeyInput" placeholder="apify_api_..."
+                    style="width: 100%; max-width: 500px; padding-right: 3rem;">
+                  <button type="button" class="input-toggle-btn" id="toggleApiKey">
+                    <i class="ph-bold ph-eye"></i>
+                  </button>
+                </div>
               </div>
             </div>
-            
+
+            <!-- LinkedIn Cookie -->
+            <div style="margin-bottom: 2rem; padding-bottom: 2rem; border-bottom: 1px solid var(--border-color);">
+              <h3 style="margin-bottom: 0.5rem; font-size: 0.95rem; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.05em;">
+                <i class="las la-cookie-bite"></i> LinkedIn — Cookie de Sessão (li_at)
+              </h3>
+              <p id="linkedinCookieStatus" style="font-size: 0.8rem; margin-bottom: 1rem; color: var(--danger, #ef4444);">Cookie não configurado — extração pode falhar</p>
+              <div class="input-group" style="margin-bottom: 0;">
+                <label for="linkedinCookieInput"><i class="las la-key"></i> Cookie li_at</label>
+                <div class="input-with-icon">
+                  <input type="password" id="linkedinCookieInput" placeholder="Cole o valor do cookie li_at aqui"
+                    style="width: 100%; max-width: 500px; padding-right: 3rem;">
+                  <button type="button" class="input-toggle-btn" id="toggleLinkedinCookie">
+                    <i class="ph-bold ph-eye"></i>
+                  </button>
+                </div>
+              </div>
+              <p style="margin-top: 0.6rem; font-size: 0.78rem; color: var(--text-muted);">
+                No LinkedIn logado: F12 → Application → Cookies → <strong>li_at</strong> → copie o valor
+              </p>
+            </div>
+
+            <!-- Icypeas Key -->
+            <div style="margin-bottom: 2rem;">
+              <h3 style="margin-bottom: 0.5rem; font-size: 0.95rem; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.05em;">
+                <i class="las la-envelope"></i> Icypeas — Enriquecimento de Email
+              </h3>
+              <p id="icypeasStatusText" style="font-size: 0.8rem; margin-bottom: 1rem; color: var(--danger, #ef4444);">Icypeas Key não configurada</p>
+              <div class="input-group" style="margin-bottom: 0;">
+                <label for="icypeasKeyInput"><i class="las la-key"></i> API Key</label>
+                <div class="input-with-icon">
+                  <input type="password" id="icypeasKeyInput" placeholder="Cole sua Icypeas API Key aqui"
+                    style="width: 100%; max-width: 500px; padding-right: 3rem;">
+                  <button type="button" class="input-toggle-btn" id="toggleIcypeasKey">
+                    <i class="ph-bold ph-eye"></i>
+                  </button>
+                </div>
+              </div>
+              <p style="margin-top: 0.6rem; font-size: 0.78rem; color: var(--text-muted);">
+                Pay-per-use · ~$0.005/email · Obtenha sua key em <a href="https://app.icypeas.com/settings/api" target="_blank" style="color: var(--brand-primary);">app.icypeas.com → Settings → API</a>
+              </p>
+            </div>
+
             <div style="display: flex; gap: 1rem;">
               <button type="submit" class="btn btn-primary">
-                <i class="las la-save"></i> Salvar Alterações
+                <i class="las la-save"></i> Salvar Chaves
               </button>
               <button type="button" class="btn btn-outline" id="refreshConnectionBtn">
                 <i class="las la-sync"></i> Atualizar Status
