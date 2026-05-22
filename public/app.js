@@ -2,8 +2,77 @@ let APIFY_TOKEN = localStorage.getItem('apify_token') || '';
 let ICYPEAS_TOKEN = localStorage.getItem('icypeas_token') || '';
 let LINKEDIN_COOKIE = localStorage.getItem('linkedin_cookie') || '';
 const EMPLOYEES_ACTOR_ID = 'harvestapi~linkedin-company-employees';
-const PROFILE_SEARCH_ACTOR_ID = 'harvestapi~linkedin-profile-search';
 const COMPANY_ACTOR_ID = 'harvestapi~linkedin-company-search';
+
+function localApiCandidates(path) {
+    const isLocalPage = ['localhost', '127.0.0.1'].includes(window.location.hostname)
+        || window.location.protocol === 'file:';
+
+    if (!isLocalPage) {
+        return [path];
+    }
+
+    if (window.location.port === '5500') {
+        return [
+            `http://localhost:3001${path}`,
+            `http://localhost:3000${path}`
+        ];
+    }
+
+    return [
+        path,
+        `http://localhost:3000${path}`,
+        `http://localhost:3001${path}`
+    ];
+}
+
+async function fetchPublicLinkedInEmployees(companyUrl) {
+    const path = `/api/public-linkedin-employees?linkedin=${encodeURIComponent(companyUrl)}`;
+    let lastStatus = '';
+
+    for (const endpoint of localApiCandidates(path)) {
+        try {
+            const response = await fetch(endpoint);
+            if (!response.ok) {
+                lastStatus = `${endpoint} -> HTTP ${response.status}`;
+                continue;
+            }
+
+            const items = await response.json();
+            return Array.isArray(items) ? items : [];
+        } catch (error) {
+            lastStatus = `${endpoint} -> ${error.message}`;
+        }
+    }
+
+    console.warn('[Pipeline] Backend do fallback publico indisponivel:', lastStatus);
+    return [];
+}
+
+async function postLocalApi(path, body) {
+    let lastStatus = '';
+
+    for (const endpoint of localApiCandidates(path)) {
+        try {
+            const response = await fetch(endpoint, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(body)
+            });
+            if (!response.ok) {
+                const errorBody = await response.text();
+                lastStatus = `${endpoint} -> HTTP ${response.status} ${errorBody}`;
+                continue;
+            }
+
+            return await response.json();
+        } catch (error) {
+            lastStatus = `${endpoint} -> ${error.message}`;
+        }
+    }
+
+    throw new Error(lastStatus || `Backend indisponivel para ${path}`);
+}
 
 const COMPANY_TYPE_KEYWORDS = {
     "Operator": "apostas esportivas cassino online bet brasil operadora sportsbook bets licenciado",
@@ -121,7 +190,6 @@ const roleInput = document.getElementById('roleInput');
 const searchBtn = document.getElementById('searchBtn');
 const resultsBody = document.getElementById('resultsBody');
 const totalLeadsEl = document.getElementById('totalLeads');
-const pullDataBtn = document.getElementById('pullDataBtn');
 const motorStatusText = document.getElementById('motorStatusText');
 const motorSubtext = document.getElementById('motorSubtext');
 const statusCard = document.getElementById('leadStatusCard');
@@ -643,10 +711,9 @@ function renderTable(data) {
 
     resultsBody.innerHTML = '';
 
-    data.forEach(profile => {
+    data.forEach((profile, index) => {
         const fullName = `${profile.firstName || ''} ${profile.lastName || ''}`.trim() || 'Perfil LinkedIn';
         const title = profile.headline || profile.position || 'Não informado';
-        const locationStr = profile.location ? (profile.location.linkedinText || profile.location.country || profile.location) : 'N/A';
         const companyLabel = (profile.currentPosition && profile.currentPosition[0] ? profile.currentPosition[0].companyName : null)
             || profile.companyName
             || '';
@@ -662,10 +729,6 @@ function renderTable(data) {
         }
 
         const emailStr = (profile.emails && profile.emails.length > 0) ? profile.emails.join(', ') : (profile.email || 'N/A');
-        const isoCode = getCountryISO(locationStr);
-        const flagHtml = isoCode
-            ? `<img src="https://flagcdn.com/w40/${isoCode}.png" srcset="https://flagcdn.com/w80/${isoCode}.png 2x" width="24" alt="${locationStr}" style="border-radius: 2px;">`
-            : `<i class="las la-globe" style="font-size: 1.2rem; color: var(--text-muted);"></i>`;
 
         let tColor = '#ffeb3b', tBg = 'rgba(255, 235, 59, 0.1)', tBorder = 'rgba(255, 235, 59, 0.2)';
         if (profile.tier === 1) {
@@ -674,14 +737,20 @@ function renderTable(data) {
             tColor = '#ff9800'; tBg = 'rgba(255, 152, 0, 0.15)'; tBorder = 'rgba(255, 152, 0, 0.3)';
         }
         const tierBadge = profile.tier ? `<span style="display:inline-block; margin-top: 4px; padding: 3px 6px; font-size: 0.65rem; border-radius: 2px; background: ${tBg}; color: ${tColor}; border: 1px solid ${tBorder};">Tier ${profile.tier}</span>` : '';
-        const doubleConfirmedBadge = profile.doubleConfirmed ? `<span style="display:inline-block; margin-top: 4px; margin-left: 3px; padding: 3px 6px; font-size: 0.60rem; border-radius: 2px; background: rgba(99, 102, 241, 0.15); color: #818cf8; border: 1px solid rgba(99, 102, 241, 0.3);" title="Confirmado em 2 fontes">✓✓ 2x</span>` : '';
         const phoneStr = profile.phone || profile.phones?.[0] || 'N/A';
 
+        const isSaved = globalHistoryLeads.some(l =>
+            (l.linkedinUrl && l.linkedinUrl === profileUrl && profileUrl !== '#') ||
+            (l.fullName && l.fullName === fullName && fullName !== 'Perfil LinkedIn')
+        );
+
+        const statusHtml = isSaved
+            ? `<div class="status-indicator" title="Já salvo no banco"><i class="ph-bold ph-checks" style="color: var(--brand-primary); font-size: 1.4rem;"></i></div>`
+            : `<div class="status-indicator save-lead-btn" data-index="${index}" title="Salvar lead" style="opacity: 0.35; cursor: pointer; transition: opacity 0.2s;"><i class="ph-bold ph-plus" style="font-size: 1rem;"></i></div>`;
+
         row.innerHTML = `
-            <td style="text-align: center;" title="${locationStr}">
-                <div style="display: flex; justify-content: center; align-items: center;">
-                    ${flagHtml}
-                </div>
+            <td style="text-align: center;">
+                ${statusHtml}
             </td>
             <td>
                 <div class="user-profile">
@@ -695,7 +764,7 @@ function renderTable(data) {
                 </div>
             </td>
             <td style="font-size: 0.85rem; max-width: 180px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;" title="${title}">
-                ${title}<br>${tierBadge}${doubleConfirmedBadge}
+                ${title}<br>${tierBadge}
             </td>
             <td><span style="color: var(--brand-primary); font-size: 0.85rem; font-weight: 500;">${companyLabel}</span></td>
             <td>
@@ -714,6 +783,34 @@ function renderTable(data) {
             </td>
         `;
         resultsBody.appendChild(row);
+    });
+
+    document.querySelectorAll('.save-lead-btn').forEach(btn => {
+        btn.addEventListener('click', async (e) => {
+            const el = e.currentTarget;
+            const idx = parseInt(el.dataset.index);
+            const lead = globalLeads[idx];
+            if (!lead) return;
+
+            el.innerHTML = `<div class="spinner" style="width:16px;height:16px;border-width:2px;border-top-color:var(--brand-primary);margin:0;"></div>`;
+            el.style.opacity = '1';
+            el.style.cursor = 'default';
+            el.classList.remove('save-lead-btn');
+
+            const success = await saveLeadToDb(lead);
+            if (success) {
+                el.innerHTML = `<i class="ph-bold ph-checks" style="color: var(--brand-primary); font-size: 1.4rem;"></i>`;
+                el.title = 'Já salvo no banco';
+                globalHistoryLeads.push(lead);
+                showToast(`${lead.fullName || lead.firstName || 'Lead'} salvo!`);
+            } else {
+                el.innerHTML = `<i class="ph-bold ph-plus" style="font-size: 1rem;"></i>`;
+                el.style.opacity = '0.35';
+                el.style.cursor = 'pointer';
+                el.classList.add('save-lead-btn');
+                showToast('Erro ao salvar lead.', 'error');
+            }
+        });
     });
 }
 
@@ -805,65 +902,84 @@ async function runExtractionPipeline(companyName, companyDomain = null, companyL
             const runData = await res.json();
             const runId = runData.data.id;
             const datasetId = runData.data.defaultDatasetId;
+            let finalRunData = runData.data;
             while (true) {
                 await new Promise(resolve => setTimeout(resolve, 5000));
                 const statusData = await (await fetch(`https://api.apify.com/v2/actor-runs/${runId}?token=${APIFY_TOKEN}`)).json();
-                const status = statusData.data.status;
+                finalRunData = statusData.data;
+                const status = finalRunData.status;
                 if (status === 'SUCCEEDED') break;
                 if (['FAILED', 'ABORTED', 'TIMED-OUT'].includes(status)) throw new Error(`Actor falhou: ${status}`);
             }
-            return await (await fetch(`https://api.apify.com/v2/datasets/${datasetId}/items?token=${APIFY_TOKEN}`)).json();
+
+            const itemsRes = await fetch(`https://api.apify.com/v2/datasets/${datasetId}/items?token=${APIFY_TOKEN}`);
+            if (!itemsRes.ok) throw new Error(`Falha ao ler dataset (HTTP ${itemsRes.status})`);
+
+            const items = await itemsRes.json();
+            let logTail = '';
+            if (!Array.isArray(items) || items.length === 0) {
+                try {
+                    const logRes = await fetch(`https://api.apify.com/v2/logs/${runId}?token=${APIFY_TOKEN}`);
+                    if (logRes.ok) {
+                        const logText = await logRes.text();
+                        logTail = logText.split('\n').slice(-30).join('\n');
+                    }
+                } catch (_) {}
+            }
+
+            return {
+                actorId,
+                runId,
+                datasetId,
+                run: finalRunData,
+                items: Array.isArray(items) ? items : [],
+                logTail
+            };
         };
 
-        // ── ETAPA 1: Rodar os dois actors em paralelo (double-check) ──
-        updateStatus('active', 'Buscando Funcionários', 'Consultando 2 fontes simultâneas...');
+        updateStatus('active', 'Buscando Funcionários', 'Consultando funcionários da empresa...');
 
-        // Normaliza o cookie: garante formato "li_at=VALUE"
-        const cookieStr = LINKEDIN_COOKIE
-            ? (LINKEDIN_COOKIE.startsWith('li_at=') ? LINKEDIN_COOKIE : `li_at=${LINKEDIN_COOKIE}`)
-            : null;
-
-        // harvestapi~linkedin-profile-search
-        const primaryPayload = {
-            currentCompanies: [companySlug, companySlugShort],
-            profileScraperMode: 'Short',
-            maxResults: 60
-        };
-        if (role) primaryPayload.currentJobTitles = [role];
-        if (cookieStr) primaryPayload.cookie = cookieStr;
-
-        // harvestapi~linkedin-company-employees
-        // aponta pra /people/ que é onde o LinkedIn lista os funcionários
-        const peopleUrl = companySlug.replace(/\/?$/, '/') + 'people/';
-        const fallbackPayload = {
-            startUrls: [{ url: peopleUrl }],
+        const employeesPayload = {
+            companies: [companySlug],
             profileScraperMode: 'Short ($4 per 1k)',
-            maxResults: 60
+            maxItems: 60
         };
-        if (role) fallbackPayload.jobTitles = [role];
-        if (cookieStr) fallbackPayload.cookie = cookieStr;
+        if (role) employeesPayload.jobTitles = [role];
 
-        console.log('[Pipeline] Payloads enviados:');
-        console.log('[Pipeline] profile-search →', JSON.stringify(primaryPayload));
-        console.log('[Pipeline] company-employees →', JSON.stringify(fallbackPayload));
+        console.log('[Pipeline] Payload enviado para company-employees:', JSON.stringify(employeesPayload));
 
-        const [primaryItems, fallbackItems] = await Promise.all([
-            runActor(PROFILE_SEARCH_ACTOR_ID, primaryPayload).catch(err => {
-                console.warn('[Pipeline] Actor profile-search falhou:', err.message);
-                return [];
-            }),
-            runActor(EMPLOYEES_ACTOR_ID, fallbackPayload).catch(err => {
-                console.warn('[Pipeline] Actor company-employees falhou:', err.message);
-                return [];
-            })
-        ]);
+        const employeesResult = await runActor(EMPLOYEES_ACTOR_ID, employeesPayload).catch(err => {
+            console.warn('[Pipeline] Actor company-employees falhou:', err.message);
+            return { actorId: EMPLOYEES_ACTOR_ID, items: [], error: err.message };
+        });
 
-        console.log(`[Pipeline] Resultados — profile-search: ${primaryItems.length} | company-employees: ${fallbackItems.length}`);
-        if (primaryItems.length === 0 && fallbackItems.length === 0) {
-            console.warn('[Pipeline] Ambos actors retornaram 0. Verifique os payloads acima no console.');
+        const employeesItems = employeesResult.items;
+        let publicLinkedinItems = [];
+        if (employeesItems.length === 0) {
+            try {
+                publicLinkedinItems = await fetchPublicLinkedInEmployees(companySlug);
+            } catch (err) {
+                console.warn('[Pipeline] Fallback publico do LinkedIn falhou:', err.message);
+            }
         }
 
-        // ── Cross-check: unir os dois resultados com deduplicação por publicIdentifier/linkedinUrl ──
+        console.log('[Pipeline] Runs Apify:', {
+            companyEmployees: {
+                runId: employeesResult.runId,
+                datasetId: employeesResult.datasetId,
+                status: employeesResult.run?.status,
+                error: employeesResult.error,
+                stats: employeesResult.run?.stats,
+                logTail: employeesResult.logTail
+            }
+        });
+
+        console.log(`[Pipeline] Resultados — company-employees: ${employeesItems.length} | linkedin-publico: ${publicLinkedinItems.length}`);
+        if (employeesItems.length === 0 && publicLinkedinItems.length === 0) {
+            console.warn('[Pipeline] Actor e fallback publico retornaram 0. Veja Runs Apify acima no console.');
+        }
+
+        // Une o actor principal ao fallback público sem duplicar perfis.
         const profileMap = new Map();
 
         const addToMap = (items, source) => {
@@ -873,7 +989,6 @@ async function runExtractionPipeline(companyName, companyDomain = null, companyL
                     || null;
                 if (!key) continue;
                 if (profileMap.has(key)) {
-                    // Perfil apareceu nos dois: marcar como double-confirmed
                     profileMap.get(key)._sources.add(source);
                 } else {
                     profileMap.set(key, { ...item, _sources: new Set([source]) });
@@ -881,17 +996,13 @@ async function runExtractionPipeline(companyName, companyDomain = null, companyL
             }
         };
 
-        addToMap(primaryItems, 'profile-search');
-        addToMap(fallbackItems, 'company-employees');
+        addToMap(employeesItems, 'company-employees');
+        addToMap(publicLinkedinItems, 'linkedin-public');
 
-        // Perfis confirmados pelas 2 fontes têm prioridade na ordenação
-        let datasetItems = Array.from(profileMap.values()).map(item => ({
-            ...item,
-            _doubleConfirmed: item._sources.size === 2
-        }));
+        let datasetItems = Array.from(profileMap.values());
 
-        console.log(`[Pipeline] Total após merge: ${datasetItems.length} | Double-confirmed: ${datasetItems.filter(p => p._doubleConfirmed).length}`);
-        updateStatus('active', 'Cruzando Dados', `${datasetItems.length} perfis encontrados (${datasetItems.filter(p => p._doubleConfirmed).length} confirmados em 2 fontes)...`);
+        console.log(`[Pipeline] Total após consolidar fontes: ${datasetItems.length}`);
+        updateStatus('active', 'Consolidando Dados', `${datasetItems.length} perfis encontrados...`);
 
         // ── Ordenar por cargo (Tier) ──
         updateStatus('active', 'Filtrando Cargos', 'Analisando relevância...');
@@ -1012,16 +1123,12 @@ async function runExtractionPipeline(companyName, companyDomain = null, companyL
                     lastName,
                     headline: title,
                     linkedinUrl: verifiedUrl,
-                    tier,
-                    doubleConfirmed: emp._doubleConfirmed || false
+                    tier
                 };
             })
             .filter(Boolean)
             .sort((a, b) => {
-                // Double-confirmed com Tier menor tem prioridade máxima
-                const aScore = a.tier * 10 - (a.doubleConfirmed ? 5 : 0);
-                const bScore = b.tier * 10 - (b.doubleConfirmed ? 5 : 0);
-                return aScore - bScore;
+                return a.tier - b.tier;
             })
             .slice(0, 30);
 
@@ -1056,16 +1163,20 @@ async function runExtractionPipeline(companyName, companyDomain = null, companyL
         });
 
         globalLeads = finalLeads;
+
+        // Carregar histórico para exibir status de "salvo" correto
+        try {
+            const histApiUrl = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1' || window.location.protocol === 'file:'
+                ? 'http://localhost:3000/api/leads'
+                : '/api/leads';
+            const histRes = await fetch(histApiUrl);
+            if (histRes.ok) globalHistoryLeads = await histRes.json();
+        } catch (_) {}
+
         renderTable(finalLeads);
-        await saveLeadsToDb(finalLeads);
 
         totalLeadsEl.textContent = finalLeads.length;
-        if (globalLeads.length > 0) {
-            pullDataBtn.disabled = false;
-        }
-
-        const doubleCount = finalLeads.filter(l => l.doubleConfirmed).length;
-        showToast(`${finalLeads.length} perfis encontrados (${doubleCount} confirmados em 2 fontes). Clique em "Puxar Dados" para buscar os e-mails.`);
+        showToast(`${finalLeads.length} perfis encontrados. Salve apenas os leads que deseja enriquecer depois.`);
         updateStatus('success', 'Aguardando', `Pronto. ${finalLeads.length} funcionários encontrados.`);
 
     } catch (error) {
@@ -1095,107 +1206,33 @@ form.addEventListener('submit', (e) => {
 if (searchBtn) searchBtn.addEventListener('click', handleExtract);
 
 
-// ── Icypeas enrichment: busca email por LinkedIn URL ou nome + empresa ──
+// ── Icypeas enrichment: busca email por nome + empresa e aguarda o resultado ──
 async function enrichLeadWithIcypeas(lead) {
     if (!ICYPEAS_TOKEN) return null;
     try {
-        // Monta o body: prioriza LinkedIn URL, cai para nome + empresa como fallback
-        const body = lead.linkedinUrl
-            ? { linkedin: lead.linkedinUrl }
-            : {
-                firstname: lead.firstName || '',
-                lastname: lead.lastName || '',
-                domainOrCompany: lead.companyName || ''
-              };
-
-        const res = await fetch('https://app.icypeas.com/api/email-search', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'Authorization': `Bearer ${ICYPEAS_TOKEN}`
-            },
-            body: JSON.stringify(body)
+        const data = await postLocalApi('/api/icypeas-email', {
+            token: ICYPEAS_TOKEN,
+            lead
         });
 
-        if (!res.ok) {
-            console.warn(`[Icypeas] HTTP ${res.status} para ${lead.linkedinUrl || lead.fullName}`);
-            return null;
-        }
+        console.log('[Icypeas] Resultado:', {
+            lead: lead.fullName || `${lead.firstName || ''} ${lead.lastName || ''}`.trim(),
+            company: lead.companyDomain || lead.companyName,
+            status: data.status,
+            email: data.email || ''
+        });
 
-        const data = await res.json();
-
-        // Suporta os dois formatos de resposta da Icypeas
-        const email = data?.item?.emails?.[0]
-            || data?.data?.email
-            || data?.email
-            || '';
-
-        if (!email) return null;
-        return { email, emails: [email], phone: '' };
+        if (!data.email) return null;
+        return {
+            email: data.email,
+            emails: data.emails || [data.email],
+            phone: data.phone || '',
+            phones: data.phones || []
+        };
     } catch (err) {
-        console.warn('[Icypeas] Erro ao enriquecer:', lead.linkedinUrl, err.message);
+        console.warn('[Icypeas] Erro ao enriquecer:', lead.fullName || lead.linkedinUrl, err.message);
         return null;
     }
-}
-
-if (pullDataBtn) {
-    pullDataBtn.addEventListener('click', async () => {
-        if (!globalLeads || globalLeads.length === 0) return;
-
-        if (!ICYPEAS_TOKEN) {
-            showToast('Configure sua Icypeas API Key na aba Conexão antes de puxar dados.', 'error');
-            return;
-        }
-
-        pullDataBtn.disabled = true;
-        searchBtn.disabled = true;
-
-        const originalPullBtnContent = pullDataBtn.innerHTML;
-        pullDataBtn.innerHTML = '<span style="display: flex; align-items: center; gap: 0.5rem;"><div class="spinner" style="margin: 0; width: 16px; height: 16px; border-width: 2px;"></div> Puxando...</span>';
-
-        updateStatus('active', 'Buscando Emails (Icypeas)', `Enriquecendo 0/${globalLeads.length} leads...`);
-
-        const enrichedMap = new Map();
-
-        for (let i = 0; i < globalLeads.length; i++) {
-            const lead = globalLeads[i];
-
-            updateStatus('active', 'Buscando Emails (Icypeas)', `Enriquecendo ${i + 1}/${globalLeads.length} leads...`);
-
-            const result = await enrichLeadWithIcypeas(lead);
-            const mapKey = lead.linkedinUrl || lead.fullName || i;
-            if (result) enrichedMap.set(mapKey, result);
-
-            // Respeita rate limit da Icypeas
-            if (i < globalLeads.length - 1) {
-                await new Promise(resolve => setTimeout(resolve, 300));
-            }
-        }
-
-        updateStatus('active', 'Finalizando', 'Atualizando resultados...');
-
-        globalLeads = globalLeads.map((emp, i) => {
-            const mapKey = emp.linkedinUrl || emp.fullName || i;
-            const enriched = enrichedMap.get(mapKey);
-            return {
-                ...emp,
-                email: enriched?.email || emp.email || '',
-                emails: enriched?.emails?.length ? enriched.emails : (emp.email ? [emp.email] : []),
-                phone: emp.phone || ''
-            };
-        });
-
-        renderTable(globalLeads);
-        await saveLeadsToDb(globalLeads);
-
-        pullDataBtn.innerHTML = originalPullBtnContent;
-        pullDataBtn.disabled = false;
-        searchBtn.disabled = false;
-
-        const withEmail = globalLeads.filter(l => l.email && l.email !== 'N/A' && l.email !== '').length;
-        showToast(`Enriquecimento finalizado: ${withEmail}/${globalLeads.length} emails encontrados.`);
-        updateStatus('success', 'Finalizado', 'Emails enriquecidos com sucesso!');
-    });
 }
 
 // Company Search Logic
@@ -1736,14 +1773,10 @@ if (exportCompanyBtn) {
     });
 }
 
-async function saveLeadsToDb(leads) {
-    if (!leads || leads.length === 0) return;
-
-    updateStatus('active', 'Salvando no Banco', 'Sincronizando com MongoDB...');
+async function saveLeadToDb(lead) {
+    if (!lead) return false;
 
     try {
-        // Se estiver rodando no localhost com o servidor na porta 3000, usa a URL completa.
-        // Na Vercel, o caminho será apenas '/api/leads'
         const apiUrl = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1' || window.location.protocol === 'file:'
             ? 'http://localhost:3000/api/leads'
             : '/api/leads';
@@ -1751,21 +1784,13 @@ async function saveLeadsToDb(leads) {
         const response = await fetch(apiUrl, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(leads)
+            body: JSON.stringify([lead])
         });
 
-        if (response.ok) {
-            console.log('Leads salvos no MongoDB com sucesso');
-            showToast(`${leads.length} Leads salvos no banco de dados!`);
-        } else {
-            console.error('Falha ao salvar leads no backend');
-            showToast('Erro ao salvar no banco de dados', 'error');
-        }
+        return response.ok;
     } catch (error) {
-        console.error('Erro de conexão com o backend:', error);
-        showToast('Servidor offline - Leads não salvos no banco', 'error');
-    } finally {
-        updateStatus('success', 'Finalizado', 'Aguardando próxima tarefa...');
+        console.error('Erro ao salvar lead:', error);
+        return false;
     }
 }
 
@@ -1863,9 +1888,7 @@ function renderHistoryTable(data) {
     data.forEach(profile => {
         const fullName = profile.fullName || `${profile.firstName || ''} ${profile.lastName || ''}`.trim() || 'Perfil LinkedIn';
         const title = profile.headline || profile.position || 'Não informado';
-        const locationStr = typeof profile.location === 'string' ? profile.location : (profile.location ? (profile.location.linkedinText || profile.location.country || 'N/A') : 'N/A');
         const companyLabel = profile.companyName || 'N/A';
-        const dateStr = profile.extractedAt ? new Date(profile.extractedAt).toLocaleDateString('pt-BR') : 'N/A';
         const photoUrl = profile.photo || '';
         const profileUrl = profile.linkedinUrl || '#';
 
@@ -1877,10 +1900,12 @@ function renderHistoryTable(data) {
         }
 
         const emailStr = (profile.emails && profile.emails.length > 0) ? profile.emails.join(', ') : (profile.email || 'N/A');
-        const isoCode = getCountryISO(locationStr);
-        const flagHtml = isoCode
-            ? `<img src="https://flagcdn.com/w40/${isoCode}.png" srcset="https://flagcdn.com/w80/${isoCode}.png 2x" width="24" alt="${locationStr}" style="border-radius: 2px;">`
-            : `<i class="las la-globe" style="font-size: 1.2rem; color: var(--text-muted);"></i>`;
+        const matchedCompany = globalHistoryCompanies.find(c =>
+            (c.name || c.title || '').toLowerCase() === companyLabel.toLowerCase()
+        );
+        const companyLogoHtml = matchedCompany
+            ? getCompanyAvatarHtml(matchedCompany, companyLabel)
+            : `<div class="user-avatar company-avatar" style="border-radius: 8px;"><span>${companyLabel.charAt(0).toUpperCase()}</span></div>`;
 
         let hColor = '#ffeb3b', hBg = 'rgba(255, 235, 59, 0.1)', hBorder = 'rgba(255, 235, 59, 0.2)';
         if (profile.tier === 1) {
@@ -1891,9 +1916,9 @@ function renderHistoryTable(data) {
         const tierBadge = profile.tier ? `<span style="display:inline-block; margin-top: 4px; padding: 3px 6px; font-size: 0.65rem; border-radius: 2px; background: ${hBg}; color: ${hColor}; border: 1px solid ${hBorder};">Tier ${profile.tier}</span>` : '';
 
         row.innerHTML = `
-            <td style="text-align: center;" title="${locationStr}">
+            <td style="text-align: center;">
                 <div style="display: flex; justify-content: center; align-items: center;">
-                    ${flagHtml}
+                    ${companyLogoHtml}
                 </div>
             </td>
             <td>
@@ -1908,14 +1933,102 @@ function renderHistoryTable(data) {
             <td style="font-size: 0.85rem; max-width: 180px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;" title="${typeof title === 'string' ? title : ''}">${typeof title === 'string' ? title : ''}<br>${tierBadge}</td>
             <td><span style="color: var(--brand-primary); font-size: 0.85rem; font-weight: 500;">${companyLabel}</span></td>
             <td><span style="color: var(--text-muted); font-size: 0.85rem;">${emailStr !== 'N/A' ? `<a href="mailto:${emailStr}" style="color: inherit; text-decoration: none;">${emailStr}</a>` : 'N/A'}</span></td>
-            <td style="font-size: 0.8rem; color: var(--text-muted);">${dateStr}</td>
+            <td>
+                ${profileUrl && profileUrl !== '#'
+                    ? `<a href="${profileUrl}" target="_blank" class="linkedin-link">Ver Perfil</a>`
+                    : `<span style="color: var(--text-muted); font-size: 0.85rem;">Sem link</span>`
+                }
+            </td>
             <td style="text-align: center;">
-                <a href="${profileUrl}" target="_blank" class="btn btn-extract-action" style="font-size: 0.8rem; padding: 0.4rem 1rem; text-decoration: none; display: inline-block;">
-                    Ver Perfil
-                </a>
+                <div style="display: flex; gap: 0.5rem; justify-content: center; align-items: center;">
+                    <button class="btn btn-extract-action history-enrich-lead-btn" data-id="${profile._id}" style="font-size: 0.8rem; padding: 0.4rem 1rem; display: inline-block;">
+                        Puxar Dados
+                    </button>
+                    <button class="btn history-delete-lead-btn" data-id="${profile._id}" title="Deletar lead do banco de dados" style="padding: 0.4rem 0.6rem; background: transparent; border: none; color: rgba(239,68,68,0.7); cursor: pointer; transition: all 0.2s;">
+                        <i class="ph-bold ph-trash" style="font-size: 0.9rem;"></i>
+                    </button>
+                </div>
             </td>
         `;
         historyResultsBody.appendChild(row);
+    });
+
+    document.querySelectorAll('.history-delete-lead-btn').forEach(btn => {
+        btn.addEventListener('click', async (e) => {
+            const id = e.currentTarget.dataset.id;
+            if (!id) return;
+
+            const apiUrl = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1' || window.location.protocol === 'file:'
+                ? `http://localhost:3000/api/leads/${id}`
+                : `/api/leads/${id}`;
+
+            try {
+                const res = await fetch(apiUrl, { method: 'DELETE' });
+                if (!res.ok) {
+                    const body = await res.json().catch(() => ({}));
+                    throw new Error(body.error || `HTTP ${res.status}`);
+                }
+                globalHistoryLeads = globalHistoryLeads.filter(l => String(l._id) !== id);
+                showToast('Lead deletado com sucesso!');
+                filterHistoryTable();
+            } catch (err) {
+                console.error('Erro ao deletar lead:', err);
+                showToast(`Erro ao deletar: ${err.message}`, 'error');
+            }
+        });
+    });
+
+    document.querySelectorAll('.history-enrich-lead-btn').forEach(btn => {
+        btn.addEventListener('click', async (e) => {
+            const button = e.currentTarget;
+            const id = button.dataset.id;
+            const lead = globalHistoryLeads.find(item => String(item._id) === id);
+            if (!lead) return;
+
+            if (!ICYPEAS_TOKEN) {
+                showToast('Configure sua Icypeas API Key na aba Conexao antes de puxar dados.', 'error');
+                return;
+            }
+
+            const originalContent = button.innerHTML;
+            button.disabled = true;
+            button.innerHTML = '<span style="display: flex; align-items: center; gap: 0.4rem;"><div class="spinner" style="margin: 0; width: 14px; height: 14px; border-width: 2px;"></div> Puxando...</span>';
+            updateStatus('active', 'Buscando Dados', `Consultando Icypeas para ${lead.fullName || lead.firstName || 'lead'}...`);
+
+            const enriched = await enrichLeadWithIcypeas(lead);
+            if (!enriched) {
+                button.disabled = false;
+                button.innerHTML = originalContent;
+                showToast('Icypeas nao encontrou dados para este lead.', 'error');
+                updateStatus('error', 'Sem Dados', 'Nenhum email encontrado para o lead selecionado.');
+                return;
+            }
+
+            const updatedLead = {
+                ...lead,
+                email: enriched.email || lead.email || '',
+                emails: enriched.emails?.length ? enriched.emails : (lead.emails || []),
+                phone: enriched.phone || lead.phone || '',
+                phones: enriched.phones?.length ? enriched.phones : (lead.phones || [])
+            };
+
+            const saved = await saveLeadToDb(updatedLead);
+            button.disabled = false;
+            button.innerHTML = originalContent;
+
+            if (!saved) {
+                showToast('Dados encontrados, mas nao foi possivel atualizar o banco.', 'error');
+                updateStatus('error', 'Falha ao Salvar', 'Revise a conexao com o banco.');
+                return;
+            }
+
+            globalHistoryLeads = globalHistoryLeads.map(item =>
+                String(item._id) === id ? { ...item, ...updatedLead } : item
+            );
+            showToast(`Dados atualizados para ${updatedLead.fullName || updatedLead.firstName || 'lead'}.`);
+            updateStatus('success', 'Finalizado', 'Lead enriquecido e salvo no historico.');
+            filterHistoryTable();
+        });
     });
 }
 

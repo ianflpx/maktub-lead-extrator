@@ -280,9 +280,6 @@
             <p>Obtenha os leads qualificados do mercado de iGaming instantaneamente.</p>
           </div>
           <div class="header-actions">
-            <button type="button" class="btn btn-secondary" id="pullDataBtn" disabled>
-              <i class="las la-database"></i> Puxar Dados
-            </button>
             <button type="button" class="btn btn-primary" id="searchBtn">
               <i class="las la-bolt"></i> Extrair Agora
             </button>
@@ -337,7 +334,7 @@
             <table class="leads-table">
               <thead>
                 <tr>
-                  <th style="width: 60px; text-align: center;">País</th>
+                  <th style="width: 80px; text-align: center;">Salvo</th>
                   <th>Nome & Perfil</th>
                   <th>Cargo Título</th>
                   <th>Empresa</th>
@@ -391,7 +388,7 @@
               <div class="input-group" style="margin-bottom: 0;">
                 <label for="apiKeyInput"><i class="las la-key"></i> API Token</label>
                 <div class="input-with-icon">
-                  <input type="password" id="apiKeyInput" placeholder="apify_api_..."
+                  <input type="password" id="apiKeyInput" autocomplete="off" placeholder="apify_api_..."
                     style="width: 100%; max-width: 500px; padding-right: 3rem;">
                   <button type="button" class="input-toggle-btn" id="toggleApiKey">
                     <i class="ph-bold ph-eye"></i>
@@ -409,7 +406,7 @@
               <div class="input-group" style="margin-bottom: 0;">
                 <label for="linkedinCookieInput"><i class="las la-key"></i> Cookie li_at</label>
                 <div class="input-with-icon">
-                  <input type="password" id="linkedinCookieInput" placeholder="Cole o valor do cookie li_at aqui"
+                  <input type="password" id="linkedinCookieInput" autocomplete="off" placeholder="Cole o valor do cookie li_at aqui"
                     style="width: 100%; max-width: 500px; padding-right: 3rem;">
                   <button type="button" class="input-toggle-btn" id="toggleLinkedinCookie">
                     <i class="ph-bold ph-eye"></i>
@@ -430,7 +427,7 @@
               <div class="input-group" style="margin-bottom: 0;">
                 <label for="icypeasKeyInput"><i class="las la-key"></i> API Key</label>
                 <div class="input-with-icon">
-                  <input type="password" id="icypeasKeyInput" placeholder="Cole sua Icypeas API Key aqui"
+                  <input type="password" id="icypeasKeyInput" autocomplete="off" placeholder="Cole sua Icypeas API Key aqui"
                     style="width: 100%; max-width: 500px; padding-right: 3rem;">
                   <button type="button" class="input-toggle-btn" id="toggleIcypeasKey">
                     <i class="ph-bold ph-eye"></i>
@@ -502,13 +499,13 @@
             <table class="leads-table">
               <thead>
                 <tr>
-                  <th style="width: 60px; text-align: center;">País</th>
+                  <th style="width: 60px; text-align: center;">Logo</th>
                   <th>Nome & Perfil</th>
                   <th>Cargo Título</th>
                   <th>Empresa</th>
                   <th>E-mail</th>
-                  <th>Data Extração</th>
-                  <th style="text-align: center;">Ações</th>
+                  <th>LinkedIn</th>
+                  <th style="text-align: center; width: 170px;">Ações</th>
                 </tr>
               </thead>
               <tbody id="historyResultsBody">

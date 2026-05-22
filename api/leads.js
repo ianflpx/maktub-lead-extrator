@@ -16,17 +16,29 @@ module.exports = async (req, res) => {
                 return res.status(400).json({ error: 'Os dados devem ser um array de leads' });
             }
 
-            const savedLeads = await Lead.insertMany(leads.map((lead) => ({
+            const normalizedLeads = leads.map((lead) => ({
                 ...lead,
                 fullName: lead.fullName || `${lead.firstName || ''} ${lead.lastName || ''}`.trim(),
                 companyName: lead.companyName
                     || (lead.currentPosition && lead.currentPosition[0] ? lead.currentPosition[0].companyName : null)
                     || 'Nao informada'
-            })));
+            }));
+            const savedLeads = await Lead.bulkWrite(normalizedLeads.map((lead) => {
+                const { _id, ...leadUpdate } = lead;
+                return {
+                    updateOne: {
+                        filter: lead.linkedinUrl
+                            ? { linkedinUrl: lead.linkedinUrl }
+                            : { fullName: lead.fullName, companyName: lead.companyName },
+                        update: { $set: leadUpdate },
+                        upsert: true
+                    }
+                };
+            }));
 
             return res.status(201).json({
                 message: 'Leads salvos com sucesso!',
-                count: savedLeads.length
+                count: savedLeads.modifiedCount + savedLeads.upsertedCount
             });
         }
 

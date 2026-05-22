@@ -3,6 +3,8 @@ const mongoose = require('mongoose');
 const cors = require('cors');
 const dotenv = require('dotenv');
 const path = require('path');
+const { fetchPublicLinkedInEmployees } = require('./lib/public-linkedin-employees');
+const { findIcypeasEmail } = require('./lib/icypeas-email');
 
 dotenv.config();
 
@@ -17,6 +19,27 @@ app.use(express.static(publicDir));
 
 app.get('/', (req, res) => {
     res.sendFile(path.join(publicDir, 'index.html'));
+});
+
+app.get('/api/public-linkedin-employees', async (req, res) => {
+    try {
+        res.json(await fetchPublicLinkedInEmployees(req.query.linkedin));
+    } catch (error) {
+        console.error('Erro ao buscar funcionarios publicos do LinkedIn:', error);
+        res.json([]);
+    }
+});
+
+app.post('/api/icypeas-email', async (req, res) => {
+    try {
+        res.json(await findIcypeasEmail({
+            token: req.body?.token || '',
+            lead: req.body?.lead || {}
+        }));
+    } catch (error) {
+        console.error('Erro ao consultar Icypeas:', error);
+        res.status(502).json({ error: error.message });
+    }
 });
 
 // MongoDB Connection
@@ -105,12 +128,24 @@ app.post('/api/leads', async (req, res) => {
             };
         });
 
-        const savedLeads = await Lead.insertMany(normalizedLeads);
-        console.log(`✅ ${savedLeads.length} leads salvos com sucesso no MongoDB!`);
+        const savedLeads = await Lead.bulkWrite(normalizedLeads.map((lead) => {
+            const { _id, ...leadUpdate } = lead;
+            return {
+                updateOne: {
+                    filter: lead.linkedinUrl
+                        ? { linkedinUrl: lead.linkedinUrl }
+                        : { fullName: lead.fullName, companyName: lead.companyName },
+                    update: { $set: leadUpdate },
+                    upsert: true
+                }
+            };
+        }));
+        const savedCount = savedLeads.modifiedCount + savedLeads.upsertedCount;
+        console.log(`✅ ${savedCount} leads salvos com sucesso no MongoDB!`);
 
         res.status(201).json({ 
             message: 'Leads salvos com sucesso!', 
-            count: savedLeads.length 
+            count: savedCount
         });
     } catch (error) {
         console.error('❌ Erro ao salvar leads:', error);
@@ -187,6 +222,16 @@ app.get('/api/empresas', async (req, res) => {
         res.json(empresas);
     } catch (error) {
         res.status(500).json({ error: 'Erro ao buscar empresas' });
+    }
+});
+
+app.delete('/api/leads/:id', async (req, res) => {
+    try {
+        const result = await Lead.findByIdAndDelete(req.params.id);
+        if (!result) return res.status(404).json({ error: 'Lead não encontrado' });
+        res.json({ message: 'Lead deletado com sucesso' });
+    } catch (error) {
+        res.status(500).json({ error: 'Erro ao deletar lead', details: error.message });
     }
 });
 
