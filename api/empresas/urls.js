@@ -1,6 +1,7 @@
 const { connectToDatabase } = require('../../lib/mongodb');
 const { Empresa } = require('../../lib/models');
 const { allowCors } = require('../../lib/vercel-api');
+const { requireAuth } = require('../../lib/auth');
 
 module.exports = async (req, res) => {
     if (allowCors(req, res)) {
@@ -13,8 +14,10 @@ module.exports = async (req, res) => {
 
     try {
         await connectToDatabase();
+        const user = await requireAuth(req, res);
+        if (!user) return;
 
-        const empresas = await Empresa.find({}, {
+        const empresas = await Empresa.find({ userId: user._id }, {
             linkedinUrl: 1,
             url: 1,
             name: 1,

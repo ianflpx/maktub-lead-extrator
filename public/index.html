@@ -19,7 +19,32 @@
 </head>
 
 <body>
-  <div class="app-container">
+  <div class="auth-screen" id="authScreen">
+    <div class="auth-card">
+      <img src="assets/logo.png" alt="Maktub" class="auth-logo">
+      <h1>Entrar na Maktub</h1>
+      <p>Acesse sua conta para carregar suas chaves e historico.</p>
+
+      <form id="authForm" class="auth-form">
+        <div class="input-group">
+          <label for="authEmail"><i class="ph-bold ph-envelope"></i> Email</label>
+          <input type="email" id="authEmail" autocomplete="email" required placeholder="voce@email.com">
+        </div>
+        <div class="input-group">
+          <label for="authPassword"><i class="ph-bold ph-lock"></i> Senha</label>
+          <input type="password" id="authPassword" autocomplete="current-password" required placeholder="Minimo 6 caracteres">
+        </div>
+        <button type="submit" class="btn btn-primary w-100" id="authSubmitBtn">
+          <i class="ph-bold ph-sign-in"></i> Entrar
+        </button>
+      </form>
+
+      <button type="button" class="auth-switch-btn" id="authModeBtn">Criar nova conta</button>
+      <p class="auth-error" id="authError"></p>
+    </div>
+  </div>
+
+  <div class="app-container" id="appContainer" style="display: none;">
     <!-- Sidebar -->
     <aside class="sidebar" id="sidebar">
       <div class="sidebar-header">
@@ -31,8 +56,22 @@
       </div>
 
       <nav class="sidebar-nav">
+        <div class="nav-category">Início</div>
+        <a href="#" class="nav-item active" id="nav-dashboard">
+          <i class="ph-bold ph-squares-four"></i>
+          <span>Dashboard</span>
+        </a>
+        <a href="#" class="nav-item" id="nav-crm">
+          <i class="ph-bold ph-address-book"></i>
+          <span>CRM</span>
+        </a>
+        <a href="#" class="nav-item" id="nav-email-blasts">
+          <i class="ph-bold ph-paper-plane-tilt"></i>
+          <span>Disparos E-mail</span>
+        </a>
+
         <div class="nav-category">Empresas</div>
-        <a href="#" class="nav-item active" id="nav-company-search">
+        <a href="#" class="nav-item" id="nav-company-search">
           <i class="ph-bold ph-magnifying-glass"></i>
           <span>Buscar empresas</span>
         </a>
@@ -52,13 +91,17 @@
         </a>
 
         <div class="nav-category">Configurações</div>
-        <a href="#" class="nav-item">
+        <a href="#" class="nav-item" id="nav-account">
           <i class="ph-bold ph-user"></i>
           <span>Conta</span>
         </a>
         <a href="#" class="nav-item" id="nav-connection">
           <i class="ph-bold ph-plugs"></i>
           <span>Conexão</span>
+        </a>
+        <a href="#" class="nav-item" id="nav-usage">
+          <i class="ph-bold ph-chart-line-up"></i>
+          <span>Consumo</span>
         </a>
       </nav>
 
@@ -71,6 +114,267 @@
 
     <!-- Main Content -->
     <main class="main-content">
+      <!-- Dashboard View -->
+      <div id="dashboard-view" class="dashboard-view" style="display: none;">
+        <header class="top-header dashboard-header">
+          <div class="page-title">
+            <h1>Dashboard</h1>
+            <p>Visão geral da sua operação de prospecção.</p>
+          </div>
+          <div class="header-actions">
+            <div class="usage-filter-wrap">
+              <select id="dashDateFilter" class="usage-date-select" title="Filtrar por período">
+                <option value="all">Todo período</option>
+                <option value="today">Hoje</option>
+                <option value="yesterday">Ontem</option>
+                <option value="7days">Últimos 7 dias</option>
+                <option value="30days">Últimos 30 dias</option>
+                <option value="custom">Personalizado</option>
+              </select>
+              <div id="dashCustomDateRange" class="usage-custom-range" style="display:none;">
+                <input type="date" id="dashDateFrom" class="usage-date-input" title="Data inicial">
+                <span>até</span>
+                <input type="date" id="dashDateTo" class="usage-date-input" title="Data final">
+                <button type="button" class="btn btn-outline" id="dashApplyCustomDate" style="padding:0.4rem 0.75rem;font-size:0.8rem;">Aplicar</button>
+              </div>
+            </div>
+            <button type="button" class="btn btn-outline btn-refresh" id="refreshDashBtn">
+              <i class="ph-bold ph-arrows-clockwise"></i> Atualizar
+            </button>
+          </div>
+        </header>
+
+        <!-- KPI Cards -->
+        <div class="stats-bar dash-kpis" style="margin-top: 1rem;">
+          <div class="stat-card panel">
+            <i class="ph-bold ph-buildings"></i>
+            <div class="stat-info">
+              <span class="stat-value" id="dashTotalCompanies">—</span>
+              <span class="stat-label">Empresas no banco</span>
+            </div>
+          </div>
+          <div class="stat-card panel">
+            <i class="ph-bold ph-users"></i>
+            <div class="stat-info">
+              <span class="stat-value" id="dashTotalLeads">—</span>
+              <span class="stat-label">Leads no banco</span>
+            </div>
+          </div>
+          <div class="stat-card panel">
+            <i class="ph-bold ph-envelope"></i>
+            <div class="stat-info">
+              <span class="stat-value" id="dashLeadsWithEmail">—</span>
+              <span class="stat-label">Emails coletados</span>
+            </div>
+          </div>
+          <div class="stat-card panel">
+            <i class="ph-bold ph-currency-dollar"></i>
+            <div class="stat-info">
+              <span class="stat-value" id="dashTotalCost">—</span>
+              <span class="stat-label">Custo total gasto</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="dashboard-insights-grid" style="margin-top: 1rem;">
+        <!-- Company Type Breakdown -->
+        <section class="panel dashboard-analytics-panel">
+          <div class="table-header dashboard-panel-header">
+            <div>
+              <span class="dashboard-kicker">Distribuição</span>
+                <h3><i class="ph-bold ph-chart-donut" style="margin-right: 0.4rem;"></i>Empresas por Tipo</h3>
+            </div>
+            <span class="dashboard-panel-pill">Banco de empresas</span>
+          </div>
+          <div id="dashCompanyTypes" class="dash-type-list">
+            <div class="empty-content" style="padding: 2rem;">
+              <div class="spinner dash-spinner" style="width:28px;height:28px;border-width:3px;border-top-color:var(--brand-primary);"></div>
+              <p>Carregando...</p>
+            </div>
+          </div>
+        </section>
+
+        <section class="panel dashboard-analytics-panel">
+          <div class="table-header dashboard-panel-header">
+            <div>
+              <span class="dashboard-kicker">Pipeline</span>
+              <h3><i class="ph-bold ph-kanban" style="margin-right: 0.4rem;"></i>Etapas do CRM</h3>
+            </div>
+            <span class="dashboard-panel-pill">Leads por etapa</span>
+          </div>
+          <div id="dashCrmStages" class="dash-crm-stage-list">
+            <div class="empty-content" style="padding: 2rem;">
+              <div class="spinner dash-spinner" style="width:28px;height:28px;border-width:3px;border-top-color:var(--brand-primary);"></div>
+              <p>Carregando...</p>
+            </div>
+          </div>
+        </section>
+      </div>
+      </div>
+
+      <!-- CRM View -->
+      <div id="crm-view" style="display: none;">
+        <header class="top-header">
+          <div class="page-title">
+            <h1>CRM</h1>
+            <p>Gerencie seus leads e acompanhe o pipeline de vendas.</p>
+          </div>
+          <div class="header-actions">
+            <button type="button" class="btn btn-outline btn-refresh" id="crmRefreshBtn">
+              <i class="ph-bold ph-arrows-clockwise"></i> Atualizar
+            </button>
+            <button type="button" class="btn btn-primary" id="crmAddStageBtn">
+              <i class="ph-bold ph-plus"></i> Nova etapa
+            </button>
+          </div>
+        </header>
+        <section class="crm-toolbar panel">
+          <div class="crm-filters">
+            <div class="input-group">
+              <label for="crmSearchInput"><i class="ph-bold ph-magnifying-glass"></i> Buscar lead</label>
+              <input type="text" id="crmSearchInput" placeholder="Nome, empresa, cargo ou email...">
+            </div>
+            <div class="input-group">
+              <label for="crmEmailFilter"><i class="ph-bold ph-envelope-simple"></i> Filtrar email</label>
+              <select id="crmEmailFilter" class="crm-email-filter">
+                <option value="all">Todos os leads</option>
+                <option value="with">Apenas com email</option>
+                <option value="without">Apenas sem email</option>
+              </select>
+            </div>
+          </div>
+          <div class="crm-summary">
+            <span id="crmLeadCount">0 leads</span>
+            <span id="crmStageCount">0 etapas</span>
+          </div>
+        </section>
+        <section class="crm-board-wrap">
+          <div class="crm-board" id="crmBoard">
+            <div class="empty-content" style="padding: 3rem;">
+              <div class="spinner" style="width: 30px; height: 30px; border-width: 3px;"></div>
+              <p>Carregando CRM...</p>
+            </div>
+          </div>
+        </section>
+      </div>
+
+      <!-- Email Blasts View -->
+      <div id="email-blasts-view" style="display: none;">
+        <header class="top-header email-blasts-header">
+          <div class="page-title">
+            <h1>Disparos E-mail</h1>
+            <p>Envie uma lista CSV para o fluxo do n8n disparar os e-mails automaticamente.</p>
+          </div>
+        </header>
+
+        <section class="email-blasts-panel">
+          <div class="email-blasts-grid">
+            <div class="email-blasts-form panel">
+              <div class="email-lang-selector">
+                <button type="button" class="email-lang-btn active" id="emailLangPt">BR Portugues</button>
+                <button type="button" class="email-lang-btn" id="emailLangEn">US English</button>
+              </div>
+
+              <div class="section-label">Arquivos do disparo</div>
+              <div class="email-upload-row">
+                <div class="email-upload-block">
+                  <label class="email-drop-zone" id="emailCsvDropZone">
+                    <input type="file" id="emailCsvInput" accept=".csv">
+                    <i class="ph-bold ph-file-csv"></i>
+                    <strong>Lista CSV</strong>
+                    <span>name, phone, email, empresa</span>
+                  </label>
+                  <p class="email-file-name" id="emailCsvFileName"></p>
+                </div>
+                <div class="email-upload-block">
+                  <label class="email-drop-zone" id="emailLogoDropZone">
+                    <input type="file" id="emailLogoInput" accept="image/*">
+                    <i class="ph-bold ph-image"></i>
+                    <strong>Logo da Empresa</strong>
+                    <span>PNG com fundo transparente</span>
+                  </label>
+                  <p class="email-file-name" id="emailLogoFileName"></p>
+                </div>
+              </div>
+
+              <div class="email-composite-preview" id="emailCompositePreview">
+                <div class="email-preview-top">
+                  <span>Preview da imagem</span>
+                  <strong>gerado</strong>
+                </div>
+                <canvas id="emailCompositeCanvas"></canvas>
+              </div>
+
+              <div class="email-upload-block">
+                <label class="email-drop-zone email-drop-zone-wide" id="emailAttachmentDropZone">
+                  <input type="file" id="emailAttachmentInput" accept="image/*,.pdf">
+                  <i class="ph-bold ph-paperclip"></i>
+                  <strong>Anexo ao email <small>(opcional)</small></strong>
+                  <span>Imagem ou PDF que sera anexado ao email</span>
+                </label>
+                <p class="email-file-name" id="emailAttachmentFileName"></p>
+              </div>
+
+              <div class="email-delay-row">
+                <label for="emailDelayInput">Delay entre emails:</label>
+                <input type="number" id="emailDelayInput" value="10" min="1" max="1440">
+                <span>minutos</span>
+              </div>
+
+              <button type="button" class="btn btn-primary w-100" id="emailSendBtn" disabled>
+                <i class="ph-bold ph-paper-plane-tilt"></i> Enviar lista e disparar emails
+              </button>
+
+              <div class="email-status" id="emailStatus"></div>
+            </div>
+
+            <div class="email-blasts-side">
+              <section class="email-preview-card panel" id="emailPreview">
+                <div class="table-header">
+                  <h3>Pre-visualizacao</h3>
+                  <span class="status-badge new" id="emailTotalBadge">0 contatos</span>
+                </div>
+                <div class="table-responsive">
+                  <table class="leads-table email-preview-table">
+                    <thead>
+                      <tr id="emailPreviewHead"></tr>
+                    </thead>
+                    <tbody id="emailPreviewBody">
+                      <tr class="empty-state">
+                        <td>
+                          <div class="empty-content">
+                            <i class="ph-bold ph-upload-simple"></i>
+                            <p>Carregue um CSV para visualizar os contatos.</p>
+                          </div>
+                        </td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
+                <p class="email-more-rows" id="emailMoreRows"></p>
+              </section>
+
+              <section class="email-info panel">
+                <h3>Como funciona</h3>
+                <p>1. O CSV e lido no navegador, sem armazenar os dados aqui.</p>
+                <p>2. Os contatos sao enviados para o n8n via webhook.</p>
+                <p>3. O n8n envia 1 email a cada X minutos automaticamente.</p>
+              </section>
+
+              <section class="email-sent-log panel" id="emailSentLog" style="display: none;">
+                <div class="table-header">
+                  <h3>Emails enviados</h3>
+                  <span class="status-badge saved" id="emailSentBadge">0</span>
+                </div>
+                <div class="email-sent-list" id="emailSentList"></div>
+              </section>
+            </div>
+          </div>
+        </section>
+
+        <img id="emailBaseGameImg" src="assets/email-base.png" alt="" style="display:none;">
+      </div>
+
       <!-- Company Search View -->
       <div id="company-search-view">
         <header class="top-header">
@@ -443,9 +747,170 @@
               <button type="submit" class="btn btn-primary">
                 <i class="las la-save"></i> Salvar Chaves
               </button>
-              <button type="button" class="btn btn-outline" id="refreshConnectionBtn">
-                <i class="las la-sync"></i> Atualizar Status
+              <button type="button" class="btn btn-outline btn-refresh" id="refreshConnectionBtn">
+                <i class="ph-bold ph-arrows-clockwise"></i> Atualizar
               </button>
+            </div>
+          </form>
+        </section>
+      </div>
+
+      <!-- Usage View -->
+      <div id="usage-view" style="display: none;">
+        <header class="top-header">
+          <div class="page-title">
+            <h1>Consumo</h1>
+            <p>Acompanhe as consultas feitas nas APIs e o custo estimado registrado.</p>
+          </div>
+          <div class="header-actions">
+            <div class="usage-filter-wrap">
+              <select id="usageDateFilter" class="usage-date-select" title="Filtrar por período">
+                <option value="today">Hoje</option>
+                <option value="yesterday">Ontem</option>
+                <option value="7days">Últimos 7 dias</option>
+                <option value="30days">Últimos 30 dias</option>
+                <option value="all">Sempre</option>
+                <option value="custom">Personalizado</option>
+              </select>
+              <div id="usageCustomDateRange" class="usage-custom-range" style="display:none;">
+                <input type="date" id="usageDateFrom" class="usage-date-input" title="Data inicial">
+                <span>até</span>
+                <input type="date" id="usageDateTo" class="usage-date-input" title="Data final">
+                <button type="button" class="btn btn-outline" id="usageApplyCustomDate" style="padding: 0.4rem 0.75rem; font-size: 0.8rem;">Aplicar</button>
+              </div>
+            </div>
+            <button type="button" class="btn btn-outline btn-refresh" id="refreshUsageBtn">
+              <i class="ph-bold ph-arrows-clockwise"></i> Atualizar
+            </button>
+          </div>
+        </header>
+
+        <div class="stats-bar usage-stats" style="margin-top: 1rem;">
+          <div class="stat-card panel">
+            <i class="las la-calendar-day"></i>
+            <div class="stat-info">
+              <span class="stat-value" id="usageTodayCost">$0.00</span>
+              <span class="stat-label">Gasto estimado hoje</span>
+            </div>
+          </div>
+          <div class="stat-card panel">
+            <i class="las la-calendar"></i>
+            <div class="stat-info">
+              <span class="stat-value" id="usageMonthCost">$0.00</span>
+              <span class="stat-label">Gasto estimado no mes</span>
+            </div>
+          </div>
+        </div>
+
+        <section class="results-container panel" style="margin-top: 1rem;">
+          <div class="table-header usage-table-header">
+            <div>
+              <h3>Consultas registradas</h3>
+              <p id="usageTableSubtitle">Maximo de 20 itens por pagina</p>
+            </div>
+            <div class="usage-pagination">
+              <button type="button" class="btn btn-outline usage-page-btn" id="usagePrevPage" aria-label="Pagina anterior" title="Pagina anterior">
+                <i class="ph-bold ph-caret-left"></i>
+              </button>
+              <span id="usagePageInfo">Pagina 1 de 1</span>
+              <button type="button" class="btn btn-outline usage-page-btn" id="usageNextPage" aria-label="Proxima pagina" title="Proxima pagina">
+                <i class="ph-bold ph-caret-right"></i>
+              </button>
+            </div>
+          </div>
+          <div class="table-responsive">
+            <table class="leads-table">
+              <thead>
+                <tr>
+                  <th>Data</th>
+                  <th>API</th>
+                  <th>Operacao</th>
+                  <th>Status</th>
+                  <th style="text-align: center;">Resultados</th>
+                  <th style="text-align: right;">Custo estimado</th>
+                </tr>
+              </thead>
+              <tbody id="usageResultsBody">
+                <tr class="empty-state">
+                  <td colspan="6">
+                    <div class="empty-content">
+                      <div class="spinner" id="usageSpinner"
+                        style="width: 30px; height: 30px; border-width: 3px; border-top-color: var(--brand-primary); display: none;">
+                      </div>
+                      <p id="usageEmptyText">Carregando consumo...</p>
+                    </div>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </section>
+      </div>
+
+      <!-- Account View -->
+      <div id="account-view" style="display: none;">
+        <header class="top-header">
+          <div class="page-title">
+            <h1>Conta</h1>
+            <p>Veja o login ativo e as configuracoes salvas para esta conta.</p>
+          </div>
+          <div class="header-actions">
+            <button type="button" class="btn btn-outline" id="logoutBtn">
+              <i class="ph-bold ph-sign-out"></i> Sair
+            </button>
+          </div>
+        </header>
+
+        <section class="panel account-panel">
+          <div class="account-summary">
+            <div class="user-avatar account-avatar" id="accountAvatar">?</div>
+            <div>
+              <span class="stat-label">Login conectado</span>
+              <h3 id="accountEmail">-</h3>
+            </div>
+          </div>
+
+          <div class="account-grid">
+            <div class="account-key-card">
+              <span>Apify</span>
+              <strong id="accountApifyStatus">Nao configurada</strong>
+            </div>
+            <div class="account-key-card">
+              <span>Icypeas</span>
+              <strong id="accountIcypeasStatus">Nao configurada</strong>
+            </div>
+            <div class="account-key-card">
+              <span>LinkedIn Cookie</span>
+              <strong id="accountLinkedinStatus">Nao configurado</strong>
+            </div>
+          </div>
+
+          <form class="account-password-form" id="accountPasswordForm">
+            <div class="account-section-title">
+              <h2>Trocar senha</h2>
+              <p>Atualize sua senha de acesso mantendo esta sessao conectada.</p>
+            </div>
+
+            <div class="password-grid">
+              <div class="input-group">
+                <label for="currentPasswordInput"><i class="ph-bold ph-lock-key"></i> Senha atual</label>
+                <input type="password" id="currentPasswordInput" autocomplete="current-password" required placeholder="Digite sua senha atual">
+              </div>
+              <div class="input-group">
+                <label for="newPasswordInput"><i class="ph-bold ph-lock"></i> Nova senha</label>
+                <input type="password" id="newPasswordInput" autocomplete="new-password" required minlength="6" placeholder="Minimo 6 caracteres">
+              </div>
+              <div class="input-group">
+                <label for="confirmPasswordInput"><i class="ph-bold ph-check-circle"></i> Confirmar nova senha</label>
+                <input type="password" id="confirmPasswordInput" autocomplete="new-password" required minlength="6" placeholder="Repita a nova senha">
+              </div>
+            </div>
+
+            <div class="password-actions">
+              <button type="submit" class="btn btn-primary" id="accountPasswordBtn">
+                <i class="ph-bold ph-shield-check"></i> Alterar senha
+              </button>
+              <p class="account-password-message" id="accountPasswordMessage"></p>
             </div>
           </form>
         </section>
@@ -486,6 +951,13 @@
             <div class="stat-info">
               <span class="stat-value" id="historyTotalLeads">0</span>
               <span class="stat-label">Leads Salvos</span>
+            </div>
+          </div>
+          <div class="stat-card panel">
+            <i class="las la-envelope"></i>
+            <div class="stat-info">
+              <span class="stat-value" id="historyLeadsWithEmail">0</span>
+              <span class="stat-label">Com E-mail</span>
             </div>
           </div>
         </div>
@@ -533,8 +1005,8 @@
             <p>Veja e filtre todas as empresas conectadas e salvas no banco de dados.</p>
           </div>
           <div class="header-actions">
-            <button class="btn btn-outline" id="refreshCompanyHistoryBtn" title="Atualizar lista do banco">
-              <i class="las la-sync"></i> Atualizar
+            <button class="btn btn-outline btn-refresh" id="refreshCompanyHistoryBtn" title="Atualizar lista do banco">
+              <i class="ph-bold ph-arrows-clockwise"></i> Atualizar
             </button>
             <button class="btn btn-primary" id="companyHistorySearchBtn">
               <i class="las la-search"></i> Buscar Empresas
@@ -583,6 +1055,13 @@
             <div class="stat-info">
               <span class="stat-value" id="companyHistoryTotalCompanies">0</span>
               <span class="stat-label">Empresas Salvas</span>
+            </div>
+          </div>
+          <div class="stat-card panel">
+            <i class="las la-handshake"></i>
+            <div class="stat-info">
+              <span class="stat-value" id="companyHistoryClosedClients">0</span>
+              <span class="stat-label">Clientes Fechados</span>
             </div>
           </div>
         </div>
@@ -639,10 +1118,135 @@
     </div>
   </div>
 
+  <!-- Company Details Modal -->
+  <div id="companyDetailsModal" class="modal-overlay" style="display: none;">
+    <div class="modal-card company-details-modal">
+      <div class="company-details-header">
+        <div>
+          <p class="company-details-kicker">Cadastro da empresa</p>
+          <h3 class="modal-title" id="companyDetailsTitle">Empresa</h3>
+        </div>
+        <button class="company-details-close" id="companyDetailsCloseBtn" title="Fechar">
+          <i class="ph-bold ph-x"></i>
+        </button>
+      </div>
+
+      <label class="client-toggle">
+        <input type="checkbox" id="companyDetailsClientToggle">
+        <span>
+          <strong>Virou cliente</strong>
+          <small>Marca esta empresa com a tag CLIENTE no historico.</small>
+        </span>
+      </label>
+
+      <div class="company-details-grid" id="companyDetailsGrid"></div>
+
+      <div class="modal-actions">
+        <button class="btn btn-outline" id="companyDetailsCancelBtn">Cancelar</button>
+        <button class="btn btn-primary" id="companyDetailsSaveBtn">Salvar alteracoes</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Email Blast Confirmation Modal -->
+  <div id="emailConfirmModal" class="modal-overlay" style="display: none;">
+    <div class="modal-card email-confirm-modal">
+      <div class="company-details-header">
+        <div>
+          <p class="company-details-kicker">Confirmacao do disparo</p>
+          <h3 class="modal-title">Revisar envio</h3>
+        </div>
+        <button class="company-details-close" id="emailModalCloseBtn" title="Fechar">
+          <i class="ph-bold ph-x"></i>
+        </button>
+      </div>
+      <div class="email-confirm-summary">
+        <img id="emailModalImage" alt="Preview da imagem personalizada">
+        <div>
+          <span>Contatos</span>
+          <strong id="emailModalLeadCount">0</strong>
+        </div>
+        <div>
+          <span>Delay</span>
+          <strong><span id="emailModalDelay">10</span> min</strong>
+        </div>
+      </div>
+      <div class="email-modal-table-wrap">
+        <table class="leads-table email-preview-table">
+          <thead><tr id="emailModalTableHead"></tr></thead>
+          <tbody id="emailModalTableBody"></tbody>
+        </table>
+      </div>
+      <div class="modal-actions">
+        <button class="btn btn-outline" id="emailModalCancelBtn">Cancelar</button>
+        <button class="btn btn-primary" id="emailModalConfirmBtn">Confirmar e disparar</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- CRM Lead Details Modal -->
+  <div id="crmLeadModal" class="modal-overlay" style="display: none;">
+    <div class="modal-card crm-lead-modal">
+      <div class="company-details-header">
+        <div>
+          <p class="company-details-kicker">Cadastro do lead</p>
+          <h3 class="modal-title" id="crmLeadModalTitle">Lead</h3>
+        </div>
+        <button class="company-details-close" id="crmLeadModalCloseBtn" title="Fechar">
+          <i class="ph-bold ph-x"></i>
+        </button>
+      </div>
+
+      <div class="crm-lead-form-grid">
+        <div class="input-group">
+          <label for="crmLeadFullNameInput"><i class="ph-bold ph-user"></i> Nome</label>
+          <input type="text" id="crmLeadFullNameInput" placeholder="Nome do lead">
+        </div>
+        <div class="input-group">
+          <label for="crmLeadTitleInput"><i class="ph-bold ph-briefcase"></i> Cargo</label>
+          <input type="text" id="crmLeadTitleInput" placeholder="Cargo">
+        </div>
+        <div class="input-group">
+          <label for="crmLeadCompanyInput"><i class="ph-bold ph-buildings"></i> Empresa</label>
+          <input type="text" id="crmLeadCompanyInput" placeholder="Empresa">
+        </div>
+        <div class="input-group">
+          <label for="crmLeadEmailInput"><i class="ph-bold ph-envelope"></i> E-mail</label>
+          <input type="email" id="crmLeadEmailInput" placeholder="email@empresa.com">
+        </div>
+        <div class="input-group">
+          <label for="crmLeadLinkedinInput"><i class="ph-bold ph-link"></i> LinkedIn</label>
+          <input type="url" id="crmLeadLinkedinInput" placeholder="https://www.linkedin.com/in/...">
+        </div>
+        <div class="input-group">
+          <label for="crmLeadStageSelect"><i class="ph-bold ph-kanban"></i> Etapa</label>
+          <select id="crmLeadStageSelect" class="crm-email-filter"></select>
+        </div>
+      </div>
+
+      <div class="crm-lead-details-grid" id="crmLeadDetailsGrid"></div>
+
+      <details class="crm-lead-raw-details">
+        <summary>Dados completos do lead</summary>
+        <pre id="crmLeadRawData"></pre>
+      </details>
+
+      <div class="input-group crm-lead-notes-group">
+        <label for="crmLeadNotesInput"><i class="ph-bold ph-note-pencil"></i> Comentarios e anotacoes</label>
+        <textarea id="crmLeadNotesInput" placeholder="Registre observacoes, proximos passos, objecoes, historico de contato..."></textarea>
+      </div>
+
+      <div class="modal-actions">
+        <button class="btn btn-outline" id="crmLeadModalCancelBtn">Cancelar</button>
+        <button class="btn btn-primary" id="crmLeadModalSaveBtn">Salvar lead</button>
+      </div>
+    </div>
+  </div>
+
   <!-- Feedback Toast -->
   <div id="toast" class="toast">Notificação</div>
 
-  <script src="app.js"></script>
+  <script src="app.js?v=crm-lead-notes-1"></script>
 </body>
 
 </html>
